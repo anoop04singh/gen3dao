@@ -7,11 +7,27 @@ import { daoRegistryAddress, daoRegistryAbi } from "@/lib/contracts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { AlertTriangle, FileCode, Coins, Vote, ShieldCheck, Timer } from "lucide-react";
+
+interface NodeData {
+  label: string;
+  name?: string;
+  symbol?: string;
+  period?: number;
+  percentage?: number;
+  delay?: number;
+}
 
 interface NodeInfo {
   id: string;
   type: string;
+  data: NodeData;
+}
+
+interface ContractInfo {
+    filename: string;
+    code: string;
 }
 
 interface DaoInfo {
@@ -20,7 +36,18 @@ interface DaoInfo {
   name?: string;
   description?: string;
   nodes?: NodeInfo[];
+  contracts?: ContractInfo[];
 }
+
+const ParameterDisplay = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) => (
+  <div className="flex items-center justify-between text-sm">
+    <div className="flex items-center gap-2">
+      <Icon className="h-4 w-4 text-muted-foreground" />
+      <span className="text-muted-foreground">{label}</span>
+    </div>
+    <span className="font-medium">{value}</span>
+  </div>
+);
 
 const DashboardPage = () => {
   const { isConnected, address } = useAccount();
@@ -42,7 +69,6 @@ const DashboardPage = () => {
       if (!userDaosData) return;
 
       const [daoAddresses, cids] = userDaosData;
-      console.log(`Dashboard: Found ${cids.length} DAOs for user ${address}. CIDs:`, cids);
       if (cids.length === 0) {
         setDaos([]);
         return;
@@ -53,19 +79,10 @@ const DashboardPage = () => {
       const metadataPromises = cids.map(async (cid, index) => {
         const daoAddress = daoAddresses[index];
         const ipfsUrl = `https://ipfs.io/ipfs/${cid}`;
-        console.log(`Dashboard: Attempting to fetch metadata for DAO ${daoAddress} from URL: ${ipfsUrl}`);
-
         try {
           const response = await fetch(ipfsUrl);
-          console.log(`Dashboard: Received response for CID ${cid}. Status: ${response.status}`);
-          
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
           const metadata = await response.json();
-          console.log(`Dashboard: Successfully parsed metadata for CID ${cid}:`, metadata);
-
           return { daoAddress, cid, ...metadata };
         } catch (e) {
           console.error(`Dashboard: Failed to fetch or parse metadata for CID ${cid}. URL: ${ipfsUrl}`, e);
@@ -74,13 +91,59 @@ const DashboardPage = () => {
       });
 
       const resolvedDaos = await Promise.all(metadataPromises);
-      console.log("Dashboard: Fetched all metadata. Final DAO list:", resolvedDaos);
-      setDaos(resolvedDaos.reverse()); // Show most recent first
+      setDaos(resolvedDaos.reverse());
       setIsFetchingMetadata(false);
     };
 
     fetchMetadata();
   }, [userDaosData, address]);
+
+  const renderDaoCard = (dao: DaoInfo) => {
+    const tokenNode = dao.nodes?.find(n => n.type === 'token');
+    const votingNode = dao.nodes?.find(n => n.type === 'voting');
+    const quorumNode = dao.nodes?.find(n => n.type === 'quorum');
+    const timelockNode = dao.nodes?.find(n => n.type === 'timelock');
+
+    return (
+      <Card key={dao.daoAddress} className="flex flex-col">
+        <CardHeader>
+          <CardTitle className="truncate">{dao.name || "Unnamed DAO"}</CardTitle>
+          <CardDescription className="truncate">{dao.description || "No description."}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex-grow space-y-4">
+          <div>
+            <h4 className="text-sm font-semibold mb-2">Key Parameters</h4>
+            <div className="space-y-2 rounded-md border p-3">
+              {tokenNode && <ParameterDisplay icon={Coins} label="Token" value={`${tokenNode.data.name} (${tokenNode.data.symbol})`} />}
+              {votingNode && <ParameterDisplay icon={Vote} label="Voting Period" value={`${votingNode.data.period || 'N/A'} days`} />}
+              {quorumNode && <ParameterDisplay icon={ShieldCheck} label="Quorum" value={`${quorumNode.data.percentage || 'N/A'}%`} />}
+              {timelockNode && <ParameterDisplay icon={Timer} label="Timelock Delay" value={`${timelockNode.data.delay || 'N/A'} days`} />}
+            </div>
+          </div>
+          
+          {dao.contracts && dao.contracts.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold mb-2">Generated Contracts</h4>
+              <div className="flex flex-wrap gap-2">
+                {dao.contracts.map(contract => (
+                  <Badge key={contract.filename} variant="outline">
+                    <FileCode className="h-3 w-3 mr-1.5" />
+                    {contract.filename}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+        <div className="p-4 pt-0 mt-auto">
+          <Separator className="mb-4" />
+          <p className="text-xs text-muted-foreground break-all">
+            Address: {dao.daoAddress}
+          </p>
+        </div>
+      </Card>
+    );
+  };
 
   const renderContent = () => {
     if (!isConnected) {
@@ -97,17 +160,7 @@ const DashboardPage = () => {
     if (isContractLoading || isFetchingMetadata) {
       return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(3)].map((_, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-5 w-3/4" />
-                <Skeleton className="h-4 w-full mt-2" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-4 w-full" />
-              </CardContent>
-            </Card>
-          ))}
+          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-80" />)}
         </div>
       );
     }
@@ -143,31 +196,7 @@ const DashboardPage = () => {
 
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {daos.map((dao) => (
-          <Card key={dao.daoAddress}>
-            <CardHeader>
-              <CardTitle className="truncate">{dao.name || "Unnamed DAO"}</CardTitle>
-              <CardDescription className="truncate">{dao.description || "No description."}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-xs text-muted-foreground break-all">
-                Address: {dao.daoAddress}
-              </p>
-              {dao.nodes && dao.nodes.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold mb-2">Components:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {dao.nodes.map(node => (
-                      <Badge key={node.id} variant="secondary" className="capitalize">
-                        {node.type}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+        {daos.map(renderDaoCard)}
       </div>
     );
   };
