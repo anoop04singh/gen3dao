@@ -91,19 +91,25 @@ export const sendMessageToAI = async (
 // --- AI Model for Smart Contract Generation ---
 const contractGenerationModel = genAI.getGenerativeModel({
   model: "gemini-1.5-flash",
-  systemInstruction: `You are an expert Solidity smart contract developer specializing in DAO architecture. Your task is to take a high-level description of a DAO's structure (as a JSON graph of nodes and edges) and a set of placeholder Solidity contracts, and then write the final, complete, and deployable smart contracts.
+  systemInstruction: `You are an expert Solidity smart contract developer specializing in DAO architecture. Your task is to take a high-level description of a DAO's structure and a set of placeholder Solidity contracts, and then write the final, complete, and deployable smart contracts.
 
-**Instructions:**
-1.  **Analyze the Graph:** Examine the \`nodes\` and \`edges\` to understand the DAO's architecture and how components are connected.
-2.  **Complete the Code:** Fill in all \`// TODO\` sections and complete any placeholder logic.
-3.  **Implement Custom Logic:** For any 'ai' type nodes, you MUST implement the functionality described in the \`description\` field within the corresponding placeholder contract.
-4.  **Interconnect Contracts:** Ensure contracts are linked correctly by passing addresses in constructors based on the \`edges\` data. For example, the \`Governor\` needs the \`Token\` address, and the \`Treasury\` needs the owner address (either \`Timelock\` or \`Governor\`).
-5.  **Output Format (VERY IMPORTANT):** Your response MUST follow this exact text-based format. Do not use JSON or markdown.
+**CRITICAL INSTRUCTIONS:**
+1.  **REPLACE ALL PLACEHOLDERS:** Your primary goal is to replace ALL placeholder logic with complete, production-ready Solidity code. The final code MUST NOT contain any placeholder comments like \`// TODO\`, \`// Note:\`, or \`// Placeholder:\`.
+2.  **IMPLEMENT GOVERNANCE LOGIC:** For any \`Governor\` contract, you MUST implement a full proposal lifecycle:
+    -   A \`propose\` function that creates a proposal with a description, targets, values, and calldatas.
+    -   Proposal state tracking (e.g., \`enum ProposalState { Pending, Active, Succeeded, Defeated, Executed }\`).
+    -   A \`castVote\` function allowing token holders to vote.
+    -   Vote counting logic and quorum checks against the \`quorumPercentage\`.
+    -   An \`execute\` function that sends the proposal to the \`Timelock\` for execution after a successful vote.
+3.  **IMPLEMENT TIMELOCK LOGIC:** For any \`Timelock\` contract, implement a full transaction lifecycle: queueing, execution, and cancellation. It should be the owner of the \`Treasury\` if one is present.
+4.  **IMPLEMENT CUSTOM LOGIC:** For any 'ai' type nodes, you MUST implement the functionality described in the \`description\` field within the corresponding placeholder contract.
+5.  **INTERCONNECT CONTRACTS:** Ensure contracts are linked correctly by passing addresses in constructors based on the \`edges\` data. The \`Governor\` needs the \`Token\` address, and the \`Treasury\` needs the owner address (either \`Timelock\` or \`Governor\`).
+6.  **OUTPUT FORMAT (STRICT):** Your response MUST follow this exact text-based format. Do not use JSON or markdown.
 
 For each contract, provide the filename and the code like this:
 FILENAME: TheFileName.sol
 CODE_START
-// The complete Solidity code goes here...
+// The complete, fully implemented Solidity code goes here...
 CODE_END
 
 If you are generating multiple files, separate each complete block (from FILENAME to CODE_END) with '---FILE_SEPARATOR---' on its own line.
