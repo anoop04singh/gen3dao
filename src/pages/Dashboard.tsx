@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAccount, usePublicClient } from "wagmi";
+import { useAccount, useReadContract } from "wagmi";
 import { daoRegistryAddress, daoRegistryAbi } from "@/lib/contracts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -17,65 +17,53 @@ interface DaoInfo {
 
 const DashboardPage = () => {
   const { isConnected, address } = useAccount();
-  const publicClient = usePublicClient();
   const [daos, setDaos] = useState<DaoInfo[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
+
+  const { data: userDaosData, isLoading: isContractLoading, error: contractError } = useReadContract({
+    address: daoRegistryAddress,
+    abi: daoRegistryAbi,
+    functionName: 'getDAOsByUser',
+    args: [address!],
+    query: {
+      enabled: isConnected && !!address,
+    },
+  });
 
   useEffect(() => {
-    const fetchDaos = async () => {
-      if (!isConnected || !publicClient) return;
-      setIsLoading(true);
-      setError(null);
-      console.log("Dashboard: Starting DAO fetch...");
+    const fetchMetadata = async () => {
+      if (!userDaosData) return;
 
-      try {
-        console.log("Dashboard: Fetching contract events...");
-        const events = await publicClient.getContractEvents({
-          address: daoRegistryAddress,
-          abi: daoRegistryAbi,
-          eventName: 'DAORegistered',
-          fromBlock: 0n,
-          toBlock: 'latest',
-        });
-        console.log(`Dashboard: Found ${events.length} registration events.`);
-
-        const daoMap = new Map<string, string>();
-        events.forEach(event => {
-          if (event.args.daoAddress && event.args.cid) {
-            daoMap.set(event.args.daoAddress, event.args.cid);
-          }
-        });
-        
-        const uniqueDaos = Array.from(daoMap.entries()).map(([daoAddress, cid]) => ({ daoAddress, cid }));
-        console.log(`Dashboard: Processing ${uniqueDaos.length} unique DAOs.`);
-
-        const metadataPromises = uniqueDaos.map(async (dao) => {
-          try {
-            const response = await fetch(`https://ipfs.io/ipfs/${dao.cid}`);
-            if (!response.ok) throw new Error(`Failed to fetch metadata for CID ${dao.cid}`);
-            const metadata = await response.json();
-            return { ...dao, name: metadata.name, description: metadata.description };
-          } catch (e) {
-            console.error(`Dashboard: Failed to fetch or parse metadata for ${dao.cid}`, e);
-            return { ...dao, name: "Metadata not found", description: "Could not load details from IPFS." };
-          }
-        });
-
-        const resolvedDaos = await Promise.all(metadataPromises);
-        console.log("Dashboard: Fetched all metadata. Final DAO list:", resolvedDaos);
-        setDaos(resolvedDaos);
-
-      } catch (e) {
-        console.error("Dashboard: An error occurred while fetching DAOs:", e);
-        setError("Failed to fetch DAOs from the blockchain. Please check your network and try again.");
-      } finally {
-        setIsLoading(false);
+      const [daoAddresses, cids] = userDaosData;
+      console.log(`Dashboard: Found ${cids.length} DAOs for user ${address}.`);
+      if (cids.length === 0) {
+        setDaos([]);
+        return;
       }
+
+      setIsFetchingMetadata(true);
+      
+      const metadataPromises = cids.map(async (cid, index) => {
+        const daoAddress = daoAddresses[index];
+        try {
+          const response = await fetch(`https://ipfs.io/ipfs/${cid}`);
+          if (!response.ok) throw new Error(`Failed to fetch metadata for CID ${cid}`);
+          const metadata = await response.json();
+          return { daoAddress, cid, name: metadata.name, description: metadata.description };
+        } catch (e) {
+          console.error(`Dashboard: Failed to fetch or parse metadata for ${cid}`, e);
+          return { daoAddress, cid, name: "Metadata not found", description: "Could not load details from IPFS." };
+        }
+      });
+
+      const resolvedDaos = await Promise.all(metadataPromises);
+      console.log("Dashboard: Fetched all metadata. Final DAO list:", resolvedDaos);
+      setDaos(resolvedDaos.reverse()); // Show most recent first
+      setIsFetchingMetadata(false);
     };
 
-    fetchDaos();
-  }, [isConnected, publicClient, address]);
+    fetchMetadata();
+  }, [userDaosData, address]);
 
   const renderContent = () => {
     if (!isConnected) {
@@ -83,13 +71,13 @@ const DashboardPage = () => {
         <Card className="max-w-md mx-auto mt-10">
           <CardHeader className="text-center">
             <CardTitle>Connect Your Wallet</CardTitle>
-            <CardDescription>Please connect your wallet to view and manage your DAOs.</CardDescription>
+            <CardDescription>Please connect your wallet to view your DAOs.</CardDescription>
           </CardHeader>
         </Card>
       );
     }
 
-    if (isLoading) {
+    if (isContractLoading || isFetchingMetadata) {
       return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[...Array(3)].map((_, i) => (
@@ -99,7 +87,7 @@ const DashboardPage = () => {
                 <Skeleton className="h-4 w-full mt-2" />
               </CardHeader>
               <CardContent>
-                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-4 w-full" />
               </CardContent>
             </Card>
           ))}
@@ -107,12 +95,15 @@ const DashboardPage = () => {
       );
     }
 
-    if (error) {
+    if (contractError) {
       return (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>
+            Failed to fetch DAOs from the blockchain. Please ensure you have deployed the new contract and updated the address in the code.
+            <p className="text-xs mt-2">({contractError.shortMessage})</p>
+          </AlertDescription>
         </Alert>
       );
     }
@@ -122,7 +113,7 @@ const DashboardPage = () => {
         <Card>
           <CardHeader>
             <CardTitle>No DAOs Found</CardTitle>
-            <CardDescription>You haven't deployed any DAOs yet. Once you deploy a DAO from the builder, it will appear here.</CardDescription>
+            <CardDescription>You haven't registered any DAOs with this wallet yet. Once you register a DAO from the builder, it will appear here.</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild>
