@@ -119,8 +119,17 @@ export const generateFinalContractsFromAI = async (
   `;
 
   const result = await contractGenerationModel.generateContent(prompt);
-  const jsonString = result.response.text();
+  let jsonString = result.response.text();
   
+  // Clean the string to remove markdown fences
+  if (jsonString.startsWith("```json")) {
+    jsonString = jsonString.substring(7);
+  }
+  if (jsonString.endsWith("```")) {
+    jsonString = jsonString.slice(0, -3);
+  }
+  jsonString = jsonString.trim();
+
   try {
     const parsedResult = JSON.parse(jsonString);
     return Object.entries(parsedResult).map(([filename, code]) => ({
