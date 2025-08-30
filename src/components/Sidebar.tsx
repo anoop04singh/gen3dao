@@ -44,7 +44,7 @@ export const Sidebar = ({ messages, isLoading, onSendMessage, onSelectTemplate }
           <TabsTrigger value="components">Components</TabsTrigger>
           <TabsTrigger value="templates">Templates</TabsTrigger>
         </TabsList>
-        <TabsContent value="chat" className="flex-1 overflow-hidden">
+        <TabsContent value="chat" className="flex-1 overflow-hidden flex">
           <ChatPanel 
             messages={messages}
             isLoading={isLoading}
