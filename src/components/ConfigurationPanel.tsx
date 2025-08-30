@@ -30,16 +30,30 @@ const TokenConfig = ({ node, onNodeDataChange }: { node: Node, onNodeDataChange:
 const VotingConfig = ({ node, onNodeDataChange }: { node: Node, onNodeDataChange: (nodeId: string, data: any) => void }) => (
   <div className="space-y-4">
     <div>
-      <Label htmlFor="quorum">Quorum (%)</Label>
-      <Input id="quorum" type="number" value={node.data.quorum || ''} onChange={(e) => onNodeDataChange(node.id, { ...node.data, quorum: e.target.value })} />
-    </div>
-    <div>
-      <Label htmlFor="threshold">Proposal Threshold</Label>
+      <Label htmlFor="threshold">Proposal Threshold (%)</Label>
       <Input id="threshold" type="number" value={node.data.threshold || ''} onChange={(e) => onNodeDataChange(node.id, { ...node.data, threshold: e.target.value })} />
     </div>
     <div>
       <Label htmlFor="voting-period">Voting Period (days)</Label>
       <Input id="voting-period" type="number" value={node.data.period || ''} onChange={(e) => onNodeDataChange(node.id, { ...node.data, period: e.target.value })} />
+    </div>
+  </div>
+);
+
+const QuorumConfig = ({ node, onNodeDataChange }: { node: Node, onNodeDataChange: (nodeId: string, data: any) => void }) => (
+  <div className="space-y-4">
+    <div>
+      <Label htmlFor="quorum">Quorum (%)</Label>
+      <Input id="quorum" type="number" value={node.data.percentage || ''} onChange={(e) => onNodeDataChange(node.id, { ...node.data, percentage: e.target.value })} />
+    </div>
+  </div>
+);
+
+const TimelockConfig = ({ node, onNodeDataChange }: { node: Node, onNodeDataChange: (nodeId: string, data: any) => void }) => (
+  <div className="space-y-4">
+    <div>
+      <Label htmlFor="delay">Execution Delay (days)</Label>
+      <Input id="delay" type="number" value={node.data.delay || ''} onChange={(e) => onNodeDataChange(node.id, { ...node.data, delay: e.target.value })} />
     </div>
   </div>
 );
@@ -55,6 +69,10 @@ export const ConfigurationPanel = ({ selectedNode, onNodeDataChange, onNodeDelet
         return <TokenConfig node={selectedNode} onNodeDataChange={onNodeDataChange} />;
       case 'Voting Node':
         return <VotingConfig node={selectedNode} onNodeDataChange={onNodeDataChange} />;
+      case 'Quorum Node':
+        return <QuorumConfig node={selectedNode} onNodeDataChange={onNodeDataChange} />;
+      case 'Timelock Node':
+        return <TimelockConfig node={selectedNode} onNodeDataChange={onNodeDataChange} />;
       case 'Treasury Node':
         return <p className="text-sm text-muted-foreground">No configuration available for Treasury.</p>;
       default:

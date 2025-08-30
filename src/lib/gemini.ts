@@ -24,7 +24,7 @@ const tools: Tool[] = [
             type: {
               type: "STRING",
               description:
-                "The type of node to add. Can be 'token', 'voting', or 'treasury'.",
+                "The type of node to add. Can be 'token', 'voting', 'treasury', 'quorum', or 'timelock'.",
             },
           },
           required: ["type"],
@@ -37,7 +37,7 @@ const tools: Tool[] = [
 const model = genAI.getGenerativeModel({
   model: "gemini-1.5-flash",
   systemInstruction: `You are a helpful and neutral expert in DAO governance. Your role is to assist users in building a DAO by adding components to a visual canvas.
-- You can use the 'addNode' function to add 'token', 'voting', or 'treasury' components.
+- You can use the 'addNode' function to add 'token', 'voting', 'treasury', 'quorum', or 'timelock' components.
 - You will be provided with a list of nodes already on the canvas as part of the user's prompt.
 - Before adding a node, check if a node of the same type already exists. If it does, do not call the function and instead inform the user that the component is already on the canvas.
 - When a user asks to add a component that doesn't exist yet, call the 'addNode' function.

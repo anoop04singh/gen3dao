@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Coins, Vote, Landmark } from "lucide-react";
+import { Coins, Vote, Landmark, ShieldCheck, Timer } from "lucide-react";
 
 const DraggableNode = ({ type, icon: Icon, label }: { type: string, icon: React.ElementType, label: string }) => {
   const onDragStart = (event: React.DragEvent, nodeType: string) => {
@@ -27,6 +27,8 @@ export const NodePalette = () => {
         <DraggableNode type="token" icon={Coins} label="Token" />
         <DraggableNode type="voting" icon={Vote} label="Voting" />
         <DraggableNode type="treasury" icon={Landmark} label="Treasury" />
+        <DraggableNode type="quorum" icon={ShieldCheck} label="Quorum" />
+        <DraggableNode type="timelock" icon={Timer} label="Timelock" />
       </div>
     </div>
   );

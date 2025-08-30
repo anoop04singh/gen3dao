@@ -15,6 +15,8 @@ import 'reactflow/dist/style.css';
 import { TokenNode } from './nodes/TokenNode';
 import { VotingNode } from './nodes/VotingNode';
 import { TreasuryNode } from './nodes/TreasuryNode';
+import { QuorumNode } from './nodes/QuorumNode';
+import { TimelockNode } from './nodes/TimelockNode';
 
 interface DaoCanvasProps {
   nodes: Node[];
@@ -42,6 +44,8 @@ export const DaoCanvas = ({
     token: TokenNode,
     voting: VotingNode,
     treasury: TreasuryNode,
+    quorum: QuorumNode,
+    timelock: TimelockNode,
   }), []);
 
   const onDragOver = useCallback((event: React.DragEvent) => {

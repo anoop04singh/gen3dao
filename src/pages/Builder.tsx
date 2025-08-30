@@ -7,6 +7,7 @@ import { ConfigurationPanel } from "@/components/ConfigurationPanel";
 import { DeploymentPanel } from "@/components/DeploymentPanel";
 import { Sheet } from "@/components/ui/sheet";
 import { sendMessageToAI } from "@/lib/gemini";
+import { templates } from "@/lib/templates";
 
 interface Message {
   sender: "user" | "ai";
@@ -93,6 +94,13 @@ const BuilderPage = () => {
     }
   };
 
+  const handleSelectTemplate = (templateKey: keyof typeof templates) => {
+    const template = templates[templateKey];
+    setNodes(template.nodes);
+    setEdges(template.edges);
+    setSelectedNode(null);
+  };
+
   return (
     <Sheet open={isDeploySheetOpen} onOpenChange={setIsDeploySheetOpen}>
       <Layout
@@ -101,6 +109,7 @@ const BuilderPage = () => {
           messages={messages}
           isLoading={isAiLoading}
           onSendMessage={handleAiSendMessage}
+          onSelectTemplate={handleSelectTemplate}
         />}
         configPanel={<ConfigurationPanel 
           selectedNode={selectedNode} 
