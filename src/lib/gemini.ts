@@ -25,7 +25,7 @@ const chatTools: Tool[] = [
             type: {
               type: "STRING",
               description:
-                "The type of node to add. Can be 'token', 'voting', 'treasury', 'quorum', or 'timelock'.",
+                "The type of node to add. Can be 'token', 'voting', 'treasury', 'quorum', or 'timlock'.",
             },
           },
           required: ["type"],
@@ -98,8 +98,15 @@ const contractGenerationModel = genAI.getGenerativeModel({
 2.  **Complete the Code:** Fill in all \`// TODO\` sections and complete any placeholder logic.
 3.  **Implement Custom Logic:** For any 'ai' type nodes, you MUST implement the functionality described in the \`description\` field within the corresponding placeholder contract.
 4.  **Interconnect Contracts:** Ensure contracts are linked correctly by passing addresses in constructors based on the \`edges\` data. For example, the \`Governor\` needs the \`Token\` address, and the \`Treasury\` needs the owner address (either \`Timelock\` or \`Governor\`).
-5.  **Output Format:** Your response MUST be a single, raw JSON string. The JSON object should have filenames as keys (e.g., "Governor.sol") and the complete Solidity code as string values. Do not include any other text, explanations, or markdown formatting.
-**Crucially, ensure that all double quotes within the Solidity code strings are properly escaped with a backslash (e.g., "string" becomes \\"string\\"). This is vital for the JSON to be valid.**
+5.  **Output Format (VERY IMPORTANT):** Your response MUST follow this exact text-based format. Do not use JSON or markdown.
+
+For each contract, provide the filename and the code like this:
+FILENAME: TheFileName.sol
+CODE_START
+// The complete Solidity code goes here...
+CODE_END
+
+If you are generating multiple files, separate each complete block (from FILENAME to CODE_END) with '---FILE_SEPARATOR---' on its own line.
 `,
 });
 
@@ -120,25 +127,30 @@ export const generateFinalContractsFromAI = async (
   `;
 
   const result = await contractGenerationModel.generateContent(prompt);
-  let jsonString = result.response.text();
+  const responseText = result.response.text();
   
-  // Clean the string to remove markdown fences
-  if (jsonString.startsWith("```json")) {
-    jsonString = jsonString.substring(7);
-  }
-  if (jsonString.endsWith("```")) {
-    jsonString = jsonString.slice(0, -3);
-  }
-  jsonString = jsonString.trim();
+  const contracts: { filename: string; code: string }[] = [];
+  const fileSeparator = '---FILE_SEPARATOR---';
+  const fileBlocks = responseText.split(fileSeparator);
 
-  try {
-    const parsedResult = JSON.parse(jsonString);
-    return Object.entries(parsedResult).map(([filename, code]) => ({
-      filename,
-      code: code as string,
-    }));
-  } catch (error) {
-    console.error("Failed to parse AI response as JSON:", jsonString);
+  for (const block of fileBlocks) {
+    const trimmedBlock = block.trim();
+    if (!trimmedBlock) continue;
+
+    const filenameMatch = trimmedBlock.match(/^FILENAME: (.*)$/m);
+    const codeMatch = trimmedBlock.match(/CODE_START\n([\s\S]*)\nCODE_END$/);
+
+    if (filenameMatch && filenameMatch[1] && codeMatch && codeMatch[1]) {
+      const filename = filenameMatch[1].trim();
+      const code = codeMatch[1].trim();
+      contracts.push({ filename, code });
+    }
+  }
+
+  if (contracts.length === 0) {
+    console.error("Failed to parse AI response with custom format:", responseText);
     throw new Error("The AI returned an invalid response. Please try again.");
   }
+
+  return contracts;
 };
