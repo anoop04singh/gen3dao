@@ -64,6 +64,10 @@ export const DeploymentPanel = ({ nodes, edges }: DeploymentPanelProps) => {
       showError("Wallet not connected or configured properly.");
       return;
     }
+    if (contracts.length === 0) {
+      showError("Please generate contracts before deploying.");
+      return;
+    }
 
     setStep('deploying');
     setDeploymentStatus([]);
@@ -78,6 +82,7 @@ export const DeploymentPanel = ({ nodes, edges }: DeploymentPanelProps) => {
       const { daoAddress: deployedDaoAddress } = await deployDAO(
         nodes,
         edges,
+        contracts,
         walletClient,
         publicClient,
         updateStatus

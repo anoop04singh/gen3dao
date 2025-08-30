@@ -1,64 +1,80 @@
-import { type WalletClient, type PublicClient, type Address } from 'viem';
-import { erc20Token } from './pre-compiled-contracts';
+import { type WalletClient, type PublicClient, type Address, type Abi } from 'viem';
 import { Node } from 'reactflow';
 
-export const deployToken = async (
+export interface ContractArtifact {
+  abi: Abi;
+  bytecode: `0x${string}`;
+}
+
+const deployContractInternal = async (
+    walletClient: WalletClient,
+    publicClient: PublicClient,
+    artifact: ContractArtifact,
+    args: unknown[] = []
+): Promise<Address> => {
+    const account = walletClient.account;
+    if (!account) throw new Error("Wallet not connected");
+
+    const hash = await walletClient.deployContract({
+        abi: artifact.abi,
+        bytecode: artifact.bytecode,
+        args,
+    });
+
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    if (!receipt.contractAddress) throw new Error("Deployment failed: No contract address found.");
+    
+    return receipt.contractAddress;
+};
+
+export const deployToken = (
   walletClient: WalletClient,
   publicClient: PublicClient,
-  tokenNode: Node
+  tokenNode: Node,
+  artifact: ContractArtifact
 ): Promise<Address> => {
-  const account = walletClient.account;
-  if (!account) throw new Error("Wallet not connected");
-
   const name = tokenNode.data.name || 'MyToken';
   const symbol = tokenNode.data.symbol || 'TKN';
   const supply = BigInt((tokenNode.data.supply || 1000000) * 10**18);
-
-  const hash = await walletClient.deployContract({
-    abi: erc20Token.abi,
-    bytecode: erc20Token.bytecode as `0x${string}`,
-    args: [name, symbol, supply],
-  });
-
-  const receipt = await publicClient.waitForTransactionReceipt({ hash });
-  if (!receipt.contractAddress) throw new Error("Token deployment failed: No contract address found.");
-  
-  return receipt.contractAddress;
+  return deployContractInternal(walletClient, publicClient, artifact, [name, symbol, supply]);
 };
 
-// Placeholder for Governor deployment
-export const deployGovernor = async (
-  _walletClient: WalletClient,
-  _publicClient: PublicClient,
-  governorNode: Node,
-  tokenAddress: Address
+export const deployGovernor = (
+  walletClient: WalletClient,
+  publicClient: PublicClient,
+  _governorNode: Node,
+  artifact: ContractArtifact,
+  constructorArgs: unknown[]
 ): Promise<Address> => {
-  console.log("Deploying Governor with token address:", tokenAddress, governorNode);
-  // This is a placeholder, returning a dummy address.
-  const randomHex = [...Array(40)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
-  return `0x${randomHex.substring(0, 40)}`;
+  return deployContractInternal(walletClient, publicClient, artifact, constructorArgs);
 };
 
-// Placeholder for Timelock deployment
-export const deployTimelock = async (
-  _walletClient: WalletClient,
-  _publicClient: PublicClient,
-  timelockNode: Node,
-  governorAddress: Address
+export const deployTimelock = (
+  walletClient: WalletClient,
+  publicClient: PublicClient,
+  _timelockNode: Node,
+  artifact: ContractArtifact,
+  constructorArgs: unknown[]
 ): Promise<Address> => {
-  console.log("Deploying Timelock with governor address:", governorAddress, timelockNode);
-  const randomHex = [...Array(40)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
-  return `0x${randomHex.substring(0, 40)}`;
+  return deployContractInternal(walletClient, publicClient, artifact, constructorArgs);
 };
 
-// Placeholder for Treasury deployment
-export const deployTreasury = async (
-  _walletClient: WalletClient,
-  _publicClient: PublicClient,
-  treasuryNode: Node,
-  ownerAddress: Address
+export const deployTreasury = (
+  walletClient: WalletClient,
+  publicClient: PublicClient,
+  _treasuryNode: Node,
+  artifact: ContractArtifact,
+  constructorArgs: unknown[]
 ): Promise<Address> => {
-  console.log("Deploying Treasury with owner address:", ownerAddress, treasuryNode);
-  const randomHex = [...Array(40)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
-  return `0x${randomHex.substring(0, 40)}`;
+  return deployContractInternal(walletClient, publicClient, artifact, constructorArgs);
 };
+
+export const deployContract = (
+    walletClient: WalletClient,
+    publicClient: PublicClient,
+    _node: Node,
+    artifact: ContractArtifact,
+    constructorArgs: unknown[]
+): Promise<Address> => {
+    return deployContractInternal(walletClient, publicClient, artifact, constructorArgs);
+}
