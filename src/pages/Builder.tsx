@@ -40,6 +40,11 @@ const BuilderPage = () => {
     }
   };
 
+  const handleNodeDelete = (nodeId: string) => {
+    setNodes((nds) => nds.filter((node) => node.id !== nodeId));
+    setSelectedNode(null);
+  };
+
   const addNode = (type: string) => {
     const newNode: Node = {
       id: getId(),
@@ -58,7 +63,7 @@ const BuilderPage = () => {
     setIsAiLoading(true);
 
     try {
-      const result = await sendMessageToAI(input);
+      const result = await sendMessageToAI(input, nodes);
       const { response } = result;
 
       const functionCalls = response.functionCalls();
@@ -95,7 +100,11 @@ const BuilderPage = () => {
             isLoading={isAiLoading}
             onSendMessage={handleAiSendMessage}
           />}
-          configPanel={<ConfigurationPanel selectedNode={selectedNode} onNodeDataChange={handleNodeDataChange} />}
+          configPanel={<ConfigurationPanel 
+            selectedNode={selectedNode} 
+            onNodeDataChange={handleNodeDataChange}
+            onNodeDelete={handleNodeDelete}
+          />}
         >
           <DaoCanvas
             nodes={nodes}

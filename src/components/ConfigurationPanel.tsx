@@ -1,11 +1,13 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Trash2 } from "lucide-react";
 import { Node } from 'reactflow';
 
 interface ConfigurationPanelProps {
   selectedNode: Node | null;
   onNodeDataChange: (nodeId: string, data: any) => void;
+  onNodeDelete: (nodeId: string) => void;
 }
 
 const TokenConfig = ({ node, onNodeDataChange }: { node: Node, onNodeDataChange: (nodeId: string, data: any) => void }) => (
@@ -42,7 +44,7 @@ const VotingConfig = ({ node, onNodeDataChange }: { node: Node, onNodeDataChange
   </div>
 );
 
-export const ConfigurationPanel = ({ selectedNode, onNodeDataChange }: ConfigurationPanelProps) => {
+export const ConfigurationPanel = ({ selectedNode, onNodeDataChange, onNodeDelete }: ConfigurationPanelProps) => {
   const renderContent = () => {
     if (!selectedNode) {
       return <p className="text-sm text-muted-foreground text-center">Select a node to configure it.</p>;
@@ -61,9 +63,21 @@ export const ConfigurationPanel = ({ selectedNode, onNodeDataChange }: Configura
   };
 
   return (
-    <aside className="bg-card border-l h-full p-4">
-      <h2 className="text-lg font-semibold mb-4">Configuration</h2>
-      <div className="p-4 border rounded-lg bg-muted/40 h-full">
+    <aside className="bg-card border-l h-full p-4 flex flex-col">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold">Configuration</h2>
+        {selectedNode && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onNodeDelete(selectedNode.id)}
+            aria-label="Delete node"
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        )}
+      </div>
+      <div className="p-4 border rounded-lg bg-muted/40 flex-1">
         {renderContent()}
       </div>
     </aside>
