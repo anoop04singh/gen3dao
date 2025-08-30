@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { AlertTriangle, FileCode, Coins, Vote, ShieldCheck, Timer } from "lucide-react";
+import { AlertTriangle, FileCode, Coins, Vote, ShieldCheck, Timer, ExternalLink } from "lucide-react";
 
 interface NodeData {
   label: string;
@@ -50,7 +50,7 @@ const ParameterDisplay = ({ icon: Icon, label, value }: { icon: React.ElementTyp
 );
 
 const DashboardPage = () => {
-  const { isConnected, address } = useAccount();
+  const { isConnected, address, chain } = useAccount();
   const [daos, setDaos] = useState<DaoInfo[]>([]);
   const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
 
@@ -137,9 +137,22 @@ const DashboardPage = () => {
         </CardContent>
         <div className="p-4 pt-0 mt-auto">
           <Separator className="mb-4" />
-          <p className="text-xs text-muted-foreground break-all">
-            Address: {dao.daoAddress}
-          </p>
+          <div className="text-xs text-muted-foreground flex items-start gap-1.5">
+            <span className="font-medium mt-0.5">Address:</span>
+            {chain?.blockExplorers?.default?.url ? (
+              <a
+                href={`${chain.blockExplorers.default.url}/address/${dao.daoAddress}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-primary break-all flex items-center gap-1"
+              >
+                <span>{dao.daoAddress}</span>
+                <ExternalLink className="h-3 w-3 flex-shrink-0" />
+              </a>
+            ) : (
+              <span className="break-all">{dao.daoAddress}</span>
+            )}
+          </div>
         </div>
       </Card>
     );
