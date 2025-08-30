@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Node, Edge, useNodesState, useEdgesState, addEdge } from "reactflow";
+import { Node, Edge, useNodesState, useEdgesState, addEdge, Connection } from "reactflow";
 import { Layout } from "@/components/Layout";
 import { Sidebar } from "@/components/Sidebar";
 import { DaoCanvas } from "@/components/DaoCanvas";
@@ -30,7 +30,7 @@ const BuilderPage = () => {
   ]);
   const [isAiLoading, setIsAiLoading] = useState(false);
 
-  const onConnect = (params: Edge) => setEdges((eds) => addEdge(params, eds));
+  const onConnect = (params: Edge | Connection) => setEdges((eds) => addEdge(params, eds));
 
   const handleNodeDataChange = (nodeId: string, data: any) => {
     setNodes((nds) =>
