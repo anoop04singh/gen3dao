@@ -1,20 +1,33 @@
 import { Header } from "./Header";
 import { Sidebar } from "./Sidebar";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
 
 interface LayoutProps {
   children: React.ReactNode;
+  configPanel: React.ReactNode;
 }
 
-export const Layout = ({ children }: LayoutProps) => {
+export const Layout = ({ children, configPanel }: LayoutProps) => {
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
       <Header />
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-        <main className="flex-1 p-6 overflow-auto bg-muted/40">
-          {children}
-        </main>
-      </div>
+      <ResizablePanelGroup direction="horizontal" className="flex-1">
+        <ResizablePanel defaultSize={25} minSize={20} maxSize={30}>
+          <Sidebar />
+        </ResizablePanel>
+        <ResizableHandle withHandle />
+        <ResizablePanel defaultSize={50}>
+          <main className="h-full">{children}</main>
+        </ResizablePanel>
+        <ResizableHandle withHandle />
+        <ResizablePanel defaultSize={25} minSize={20} maxSize={30}>
+          {configPanel}
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   );
 };
