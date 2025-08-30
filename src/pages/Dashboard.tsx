@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAccount, useReadContract } from "wagmi";
-import { daoRegistryAddress, daoRegistryAbi } from "@/lib/contracts";
+import { daoRegistryAddresses, daoRegistryAbi } from "@/lib/contracts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -54,13 +54,15 @@ const DashboardPage = () => {
   const [daos, setDaos] = useState<DaoInfo[]>([]);
   const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
 
+  const registryAddress = chain ? daoRegistryAddresses[chain.id] : undefined;
+
   const { data: userDaosData, isLoading: isContractLoading, error: contractError } = useReadContract({
-    address: daoRegistryAddress,
+    address: registryAddress,
     abi: daoRegistryAbi,
     functionName: 'getDAOsByUser',
     args: [address!],
     query: {
-      enabled: isConnected && !!address,
+      enabled: isConnected && !!address && !!registryAddress,
     },
   });
 
@@ -167,6 +169,18 @@ const DashboardPage = () => {
             <CardDescription>Please connect your wallet to view your DAOs.</CardDescription>
           </CardHeader>
         </Card>
+      );
+    }
+
+    if (isConnected && !registryAddress) {
+      return (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Unsupported Network</AlertTitle>
+          <AlertDescription>
+            The DAO registry contract is not deployed on {chain?.name || 'the current network'}. Please switch to a supported network like Flow EVM Testnet or Sepolia.
+          </AlertDescription>
+        </Alert>
       );
     }
 

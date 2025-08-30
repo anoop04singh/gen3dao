@@ -17,7 +17,7 @@ import { uploadJsonToIpfs } from "@/lib/ipfs";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 import { Bot, Loader, AlertTriangle, PenSquare, CheckCircle, Expand } from "lucide-react";
 import { useAccount, useWriteContract } from "wagmi";
-import { daoRegistryAddress, daoRegistryAbi } from "@/lib/contracts";
+import { daoRegistryAddresses, daoRegistryAbi } from "@/lib/contracts";
 import { ContractPreviewDialog } from "./ContractPreviewDialog";
 
 interface DeploymentPanelProps {
@@ -34,7 +34,7 @@ export const DeploymentPanel = ({ nodes, edges }: DeploymentPanelProps) => {
   const [step, setStep] = useState<Step>('idle');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
-  const { isConnected } = useAccount();
+  const { isConnected, chain } = useAccount();
   const { writeContract, isPending: isRegistering, data: hash } = useWriteContract();
 
   const handleGenerateContracts = async () => {
@@ -68,6 +68,13 @@ export const DeploymentPanel = ({ nodes, edges }: DeploymentPanelProps) => {
       return;
     }
 
+    const registryAddress = chain ? daoRegistryAddresses[chain.id] : undefined;
+    if (!registryAddress) {
+      showError(`Contract not found on ${chain?.name || 'the current network'}. Please switch networks.`);
+      setStep('generated'); // Revert
+      return;
+    }
+
     setStep('uploading');
     const uploadToastId = showLoading("Uploading DAO info to IPFS...");
     let cid;
@@ -93,7 +100,7 @@ export const DeploymentPanel = ({ nodes, edges }: DeploymentPanelProps) => {
 
     setStep('registering');
     writeContract({
-      address: daoRegistryAddress,
+      address: registryAddress,
       abi: daoRegistryAbi,
       functionName: 'registerDAO',
       args: [daoAddress as `0x${string}`, cid],
@@ -229,4 +236,3 @@ export const DeploymentPanel = ({ nodes, edges }: DeploymentPanelProps) => {
       </SheetContent>
     </>
   );
-};

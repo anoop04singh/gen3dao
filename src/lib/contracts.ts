@@ -1,5 +1,10 @@
-// The address of your newly deployed DAORegistryV2 contract
-export const daoRegistryAddress = '0x37D50136Ac1f6010AC6C4B67893434B366AF0aaF';
+import { sepolia } from 'wagmi/chains';
+
+// The addresses of your deployed DAORegistryV2 contracts, mapped by chain ID
+export const daoRegistryAddresses: { [chainId: number]: `0x${string}` } = {
+  545: '0x37D50136Ac1f6010AC6C4B67893434B366AF0aaF', // Flow EVM Testnet
+  [sepolia.id]: '0xF95e4594f90436E26A349b7f5B31f592be790547', // Sepolia Testnet
+};
 
 export const daoRegistryAbi = [
 	{
