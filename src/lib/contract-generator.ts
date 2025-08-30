@@ -110,6 +110,36 @@ contract Treasury {
 `;
 };
 
+const generateAiContract = (node: Node): string => {
+  const label = (node.data.label || 'CustomModule').replace(/\s+/g, '');
+  const description = node.data.description || 'No description provided.';
+
+  return `// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+/**
+ * @title ${label} (AI-Generated Custom Module)
+ * @dev This is a placeholder contract for custom logic requested by the user.
+ * The functionality described below needs to be implemented by a developer.
+ */
+contract ${label} {
+    address public owner; // Assuming it's owned by Governor or Timelock
+
+    constructor(address _owner) {
+        owner = _owner;
+    }
+
+    /*
+     * USER-DEFINED LOGIC:
+     * ${description.split('\n').join('\n     * ')}
+     */
+
+    // TODO: Implement the custom logic described above.
+    // This may involve interactions with the Treasury, Token, or other contracts.
+}
+`;
+};
+
 export const generateDaoContracts = (nodes: Node[], edges: Edge[]): { filename: string, code: string }[] => {
   const contracts: { filename: string, code: string }[] = [];
   
@@ -118,6 +148,7 @@ export const generateDaoContracts = (nodes: Node[], edges: Edge[]): { filename: 
   const treasuryNode = nodes.find(n => n.type === 'treasury');
   const quorumNode = nodes.find(n => n.type === 'quorum');
   const timelockNode = nodes.find(n => n.type === 'timelock');
+  const aiNodes = nodes.filter(n => n.type === 'ai');
 
   let tokenContractName = '';
   if (tokenNode) {
@@ -176,6 +207,14 @@ export const generateDaoContracts = (nodes: Node[], edges: Edge[]): { filename: 
       code: generateTreasuryContract(treasuryOwner),
     });
   }
+
+  aiNodes.forEach(node => {
+    const contractName = (node.data.label || 'CustomModule').replace(/\s+/g, '');
+    contracts.push({
+      filename: `${contractName}.sol`,
+      code: generateAiContract(node),
+    });
+  });
 
   return contracts;
 };

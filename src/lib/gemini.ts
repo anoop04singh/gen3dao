@@ -30,6 +30,24 @@ const tools: Tool[] = [
           required: ["type"],
         },
       },
+      {
+        name: "addCustomNode",
+        description: "Adds a special, AI-generated node to the canvas for custom logic or functions described by the user.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            label: {
+              type: "STRING",
+              description: "A concise title for the custom node. For example, 'Quarterly Payouts'."
+            },
+            description: {
+              type: "STRING",
+              description: "A detailed description of the custom logic the user wants. For example, 'A function to distribute 20% of treasury profits to token holders every quarter.'"
+            }
+          },
+          required: ["label", "description"]
+        }
+      }
     ],
   },
 ];
@@ -37,12 +55,12 @@ const tools: Tool[] = [
 const model = genAI.getGenerativeModel({
   model: "gemini-1.5-flash",
   systemInstruction: `You are a helpful and neutral expert in DAO governance. Your role is to assist users in building a DAO by adding components to a visual canvas.
-- You can use the 'addNode' function to add 'token', 'voting', 'treasury', 'quorum', or 'timelock' components.
-- You will be provided with a list of nodes already on the canvas as part of the user's prompt.
-- Before adding a node, check if a node of the same type already exists. If it does, do not call the function and instead inform the user that the component is already on the canvas.
-- When a user asks to add a component that doesn't exist yet, call the 'addNode' function.
-- After calling 'addNode', your response to the user should confirm the action and then proactively ask if they want to configure the new node or stick with the default settings. For example: "I've added the Token node. You can configure its name, symbol, and supply by clicking on it. Would you like to keep the defaults for now?"
-- If the user asks for an explanation of a configuration parameter (like 'quorum', 'proposal threshold', 'initial supply'), provide a simple, clear definition.
+- Use the 'addNode' function for standard components: 'token', 'voting', 'treasury', 'quorum', or 'timelock'.
+- Before adding a standard node, check if a node of the same type already exists. If it does, inform the user.
+- For user requests that describe custom logic, rules, or functions not covered by the standard nodes, you MUST use the 'addCustomNode' function. For example, if a user asks for 'a way to distribute profits to token holders' or 'a module for milestone-based funding', use 'addCustomNode'.
+- When calling 'addCustomNode', provide a clear 'label' and a detailed 'description' based on the user's request.
+- After adding any node, confirm the action and ask the user if they want to configure it or keep the defaults.
+- If the user asks for an explanation of a configuration parameter, provide a simple, clear definition.
 - Do not give financial or investment advice.`,
   tools,
 });

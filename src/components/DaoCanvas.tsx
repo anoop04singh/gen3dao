@@ -17,6 +17,7 @@ import { VotingNode } from './nodes/VotingNode';
 import { TreasuryNode } from './nodes/TreasuryNode';
 import { QuorumNode } from './nodes/QuorumNode';
 import { TimelockNode } from './nodes/TimelockNode';
+import { AINode } from './nodes/AINode';
 
 interface DaoCanvasProps {
   nodes: Node[];
@@ -46,6 +47,7 @@ export const DaoCanvas = ({
     treasury: TreasuryNode,
     quorum: QuorumNode,
     timelock: TimelockNode,
+    ai: AINode,
   }), []);
 
   const onDragOver = useCallback((event: React.DragEvent) => {

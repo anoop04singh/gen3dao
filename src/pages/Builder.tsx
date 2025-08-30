@@ -59,6 +59,16 @@ const BuilderPage = () => {
     setNodes((nds) => nds.concat(newNode));
   };
 
+  const addCustomNode = (label: string, description: string) => {
+    const newNode: Node = {
+      id: getId(),
+      type: 'ai',
+      position: { x: Math.random() * 250 + 100, y: Math.random() * 150 + 50 },
+      data: { label, description },
+    };
+    setNodes((nds) => nds.concat(newNode));
+  };
+
   const handleAiSendMessage = async (input: string) => {
     if (!input.trim() || isAiLoading) return;
 
@@ -75,6 +85,9 @@ const BuilderPage = () => {
         for (const call of functionCalls) {
           if (call.name === "addNode" && call.args.type) {
             addNode(call.args.type as string);
+          }
+          if (call.name === "addCustomNode" && call.args.label && call.args.description) {
+            addCustomNode(call.args.label as string, call.args.description as string);
           }
         }
       }

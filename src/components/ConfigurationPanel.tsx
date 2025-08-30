@@ -58,23 +58,40 @@ const TimelockConfig = ({ node, onNodeDataChange }: { node: Node, onNodeDataChan
   </div>
 );
 
+const AIConfig = ({ node, onNodeDataChange }: { node: Node, onNodeDataChange: (nodeId: string, data: any) => void }) => (
+  <div className="space-y-4">
+    <div>
+      <Label htmlFor="ai-label">Module Name</Label>
+      <Input id="ai-label" value={node.data.label || ''} onChange={(e) => onNodeDataChange(node.id, { ...node.data, label: e.target.value })} />
+    </div>
+    <div>
+      <Label>AI-Generated Logic</Label>
+      <p className="text-sm text-muted-foreground p-2 bg-background rounded-md border">
+        {node.data.description || 'No description provided.'}
+      </p>
+    </div>
+  </div>
+);
+
 export const ConfigurationPanel = ({ selectedNode, onNodeDataChange, onNodeDelete }: ConfigurationPanelProps) => {
   const renderContent = () => {
     if (!selectedNode) {
       return <p className="text-sm text-muted-foreground text-center">Select a node to configure it.</p>;
     }
 
-    switch (selectedNode.data.label) {
-      case 'Token Node':
+    switch (selectedNode.type) {
+      case 'token':
         return <TokenConfig node={selectedNode} onNodeDataChange={onNodeDataChange} />;
-      case 'Voting Node':
+      case 'voting':
         return <VotingConfig node={selectedNode} onNodeDataChange={onNodeDataChange} />;
-      case 'Quorum Node':
+      case 'quorum':
         return <QuorumConfig node={selectedNode} onNodeDataChange={onNodeDataChange} />;
-      case 'Timelock Node':
+      case 'timelock':
         return <TimelockConfig node={selectedNode} onNodeDataChange={onNodeDataChange} />;
-      case 'Treasury Node':
+      case 'treasury':
         return <p className="text-sm text-muted-foreground">No configuration available for Treasury.</p>;
+      case 'ai':
+        return <AIConfig node={selectedNode} onNodeDataChange={onNodeDataChange} />;
       default:
         return <p className="text-sm text-muted-foreground">This node cannot be configured.</p>;
     }
