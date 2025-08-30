@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Node, useNodesState, ReactFlowProvider } from "reactflow";
+import { Node, Edge, useNodesState, useEdgesState, addEdge } from "reactflow";
 import { Layout } from "@/components/Layout";
 import { Sidebar } from "@/components/Sidebar";
 import { DaoCanvas } from "@/components/DaoCanvas";
@@ -19,6 +19,7 @@ const getId = () => `${id++}`;
 
 const BuilderPage = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [isDeploySheetOpen, setIsDeploySheetOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -28,6 +29,8 @@ const BuilderPage = () => {
     },
   ]);
   const [isAiLoading, setIsAiLoading] = useState(false);
+
+  const onConnect = (params: Edge) => setEdges((eds) => addEdge(params, eds));
 
   const handleNodeDataChange = (nodeId: string, data: any) => {
     setNodes((nds) =>
@@ -91,31 +94,32 @@ const BuilderPage = () => {
   };
 
   return (
-    <ReactFlowProvider>
-       <Sheet open={isDeploySheetOpen} onOpenChange={setIsDeploySheetOpen}>
-        <Layout
-          onDeployClick={() => setIsDeploySheetOpen(true)}
-          sidebar={<Sidebar 
-            messages={messages}
-            isLoading={isAiLoading}
-            onSendMessage={handleAiSendMessage}
-          />}
-          configPanel={<ConfigurationPanel 
-            selectedNode={selectedNode} 
-            onNodeDataChange={handleNodeDataChange}
-            onNodeDelete={handleNodeDelete}
-          />}
-        >
-          <DaoCanvas
-            nodes={nodes}
-            setNodes={setNodes}
-            onNodesChange={onNodesChange}
-            onNodeSelect={setSelectedNode}
-          />
-        </Layout>
-        <DeploymentPanel />
-      </Sheet>
-    </ReactFlowProvider>
+    <Sheet open={isDeploySheetOpen} onOpenChange={setIsDeploySheetOpen}>
+      <Layout
+        onDeployClick={() => setIsDeploySheetOpen(true)}
+        sidebar={<Sidebar 
+          messages={messages}
+          isLoading={isAiLoading}
+          onSendMessage={handleAiSendMessage}
+        />}
+        configPanel={<ConfigurationPanel 
+          selectedNode={selectedNode} 
+          onNodeDataChange={handleNodeDataChange}
+          onNodeDelete={handleNodeDelete}
+        />}
+      >
+        <DaoCanvas
+          nodes={nodes}
+          edges={edges}
+          setNodes={setNodes}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onNodeSelect={setSelectedNode}
+        />
+      </Layout>
+      <DeploymentPanel nodes={nodes} edges={edges} />
+    </Sheet>
   );
 };
 

@@ -2,14 +2,13 @@
 
 import React, { useState, useCallback, useRef, useMemo } from 'react';
 import ReactFlow, {
-  addEdge,
-  useEdgesState,
   Controls,
   Background,
   Connection,
   Edge,
   Node,
   OnNodesChange,
+  OnEdgesChange,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -19,14 +18,24 @@ import { TreasuryNode } from './nodes/TreasuryNode';
 
 interface DaoCanvasProps {
   nodes: Node[];
+  edges: Edge[];
   onNodesChange: OnNodesChange;
+  onEdgesChange: OnEdgesChange;
+  onConnect: (params: Connection | Edge) => void;
   setNodes: (nodes: Node[] | ((nodes: Node[]) => Node[])) => void;
   onNodeSelect: (node: Node | null) => void;
 }
 
-export const DaoCanvas = ({ nodes, onNodesChange, setNodes, onNodeSelect }: DaoCanvasProps) => {
+export const DaoCanvas = ({ 
+  nodes, 
+  edges, 
+  onNodesChange, 
+  onEdgesChange, 
+  onConnect, 
+  setNodes, 
+  onNodeSelect 
+}: DaoCanvasProps) => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
 
   const nodeTypes = useMemo(() => ({
@@ -34,11 +43,6 @@ export const DaoCanvas = ({ nodes, onNodesChange, setNodes, onNodeSelect }: DaoC
     voting: VotingNode,
     treasury: TreasuryNode,
   }), []);
-
-  const onConnect = useCallback(
-    (params: Edge | Connection) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges],
-  );
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
