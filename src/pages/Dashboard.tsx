@@ -6,13 +6,20 @@ import { useAccount, useReadContract } from "wagmi";
 import { daoRegistryAddress, daoRegistryAbi } from "@/lib/contracts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { AlertTriangle } from "lucide-react";
+
+interface NodeInfo {
+  id: string;
+  type: string;
+}
 
 interface DaoInfo {
   daoAddress: string;
   cid: string;
   name?: string;
   description?: string;
+  nodes?: NodeInfo[];
 }
 
 const DashboardPage = () => {
@@ -59,7 +66,7 @@ const DashboardPage = () => {
           const metadata = await response.json();
           console.log(`Dashboard: Successfully parsed metadata for CID ${cid}:`, metadata);
 
-          return { daoAddress, cid, name: metadata.name, description: metadata.description };
+          return { daoAddress, cid, ...metadata };
         } catch (e) {
           console.error(`Dashboard: Failed to fetch or parse metadata for CID ${cid}. URL: ${ipfsUrl}`, e);
           return { daoAddress, cid, name: "Metadata not found", description: "Could not load details from IPFS." };
@@ -142,10 +149,22 @@ const DashboardPage = () => {
               <CardTitle className="truncate">{dao.name || "Unnamed DAO"}</CardTitle>
               <CardDescription className="truncate">{dao.description || "No description."}</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
               <p className="text-xs text-muted-foreground break-all">
                 Address: {dao.daoAddress}
               </p>
+              {dao.nodes && dao.nodes.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold mb-2">Components:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {dao.nodes.map(node => (
+                      <Badge key={node.id} variant="secondary" className="capitalize">
+                        {node.type}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
