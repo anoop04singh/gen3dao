@@ -236,3 +236,4 @@ export const DeploymentPanel = ({ nodes, edges }: DeploymentPanelProps) => {
       </SheetContent>
     </>
   );
+};
