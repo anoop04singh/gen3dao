@@ -2,7 +2,11 @@ import { ChatPanel } from "./ChatPanel";
 import { NodePalette } from "./NodePalette";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export const Sidebar = () => {
+interface SidebarProps {
+  addNode: (type: string) => void;
+}
+
+export const Sidebar = ({ addNode }: SidebarProps) => {
   return (
     <aside className="w-1/4 min-w-[300px] max-w-[400px] bg-card border-r flex flex-col">
       <Tabs defaultValue="chat" className="flex flex-col h-full">
@@ -11,7 +15,7 @@ export const Sidebar = () => {
           <TabsTrigger value="tools">Tools</TabsTrigger>
         </TabsList>
         <TabsContent value="chat" className="flex-1 overflow-hidden">
-          <ChatPanel />
+          <ChatPanel addNode={addNode} />
         </TabsContent>
         <TabsContent value="tools">
           <NodePalette />

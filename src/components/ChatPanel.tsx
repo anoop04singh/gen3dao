@@ -5,16 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Bot, User } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Avatar, AvatarFallback } from "./ui/avatar";
 
 interface Message {
   sender: "user" | "ai";
   text: string;
 }
 
-export const ChatPanel = () => {
+interface ChatPanelProps {
+  addNode: (type: string) => void;
+}
+
+export const ChatPanel = ({ addNode }: ChatPanelProps) => {
   const [messages, setMessages] = useState<Message[]>([
-    { sender: "ai", text: "Hello! How can I help you design your DAO today?" },
+    { sender: "ai", text: "Hello! Describe your DAO, and I'll help you build it. Try 'Create a DAO with a token and voting'." },
   ]);
   const [input, setInput] = useState("");
 
@@ -23,10 +27,27 @@ export const ChatPanel = () => {
     if (!input.trim()) return;
 
     const userMessage: Message = { sender: "user", text: input };
-    const aiResponse: Message = {
-      sender: "ai",
-      text: "Thanks for your input! I'm processing your request to create a DAO structure.",
-    };
+    
+    const addedNodes: string[] = [];
+    if (input.toLowerCase().includes("token")) {
+      addNode("token");
+      addedNodes.push("Token");
+    }
+    if (input.toLowerCase().includes("voting")) {
+      addNode("voting");
+      addedNodes.push("Voting");
+    }
+    if (input.toLowerCase().includes("treasury")) {
+      addNode("treasury");
+      addedNodes.push("Treasury");
+    }
+
+    let aiText = "I'm not sure how to help with that. Try asking for a 'token', 'voting', or 'treasury' module.";
+    if (addedNodes.length > 0) {
+      aiText = `I've added a ${addedNodes.join(" and a ")} module to your canvas. You can click on them to configure their settings on the right.`;
+    }
+
+    const aiResponse: Message = { sender: "ai", text: aiText };
 
     setMessages((prev) => [...prev, userMessage, aiResponse]);
     setInput("");

@@ -9,9 +9,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Wallet, Network, Bot } from "lucide-react";
+import { Wallet, Network, Bot, Rocket } from "lucide-react";
 
-export const Header = () => {
+interface HeaderProps {
+  onDeployClick: () => void;
+}
+
+export const Header = ({ onDeployClick }: HeaderProps) => {
   const [isConnected, setIsConnected] = useState(false);
   const [selectedChain, setSelectedChain] = useState("sepolia");
 
@@ -38,6 +42,10 @@ export const Header = () => {
         <Button onClick={() => setIsConnected(!isConnected)} variant="outline">
           <Wallet className="mr-2 h-4 w-4" />
           {isConnected ? "Wallet Connected" : "Connect Wallet"}
+        </Button>
+        <Button onClick={onDeployClick}>
+          <Rocket className="mr-2 h-4 w-4" />
+          Deploy
         </Button>
       </div>
     </header>

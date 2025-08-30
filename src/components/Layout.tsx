@@ -9,15 +9,17 @@ import {
 interface LayoutProps {
   children: React.ReactNode;
   configPanel: React.ReactNode;
+  sidebar: React.ReactNode;
+  onDeployClick: () => void;
 }
 
-export const Layout = ({ children, configPanel }: LayoutProps) => {
+export const Layout = ({ children, configPanel, sidebar, onDeployClick }: LayoutProps) => {
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
-      <Header />
+      <Header onDeployClick={onDeployClick} />
       <ResizablePanelGroup direction="horizontal" className="flex-1">
         <ResizablePanel defaultSize={25} minSize={20} maxSize={30}>
-          <Sidebar />
+          {sidebar}
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={50}>

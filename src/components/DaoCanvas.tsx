@@ -1,10 +1,8 @@
 "use client";
 
-import React, { useState, useCallback, useRef, useMemo } from 'react';
+import React, { useCallback, useRef, useMemo } from 'react';
 import ReactFlow, {
-  ReactFlowProvider,
   addEdge,
-  useNodesState,
   useEdgesState,
   Controls,
   Background,
@@ -18,22 +16,15 @@ import 'reactflow/dist/style.css';
 import { TokenNode } from './nodes/TokenNode';
 import { VotingNode } from './nodes/VotingNode';
 import { TreasuryNode } from './nodes/TreasuryNode';
-import { Layout } from './Layout';
-import { ConfigurationPanel } from './ConfigurationPanel';
-
-const initialNodes: Node[] = [];
-
-let id = 1;
-const getId = () => `${id++}`;
 
 interface DaoCanvasProps {
-  onNodeSelect: (node: Node | null) => void;
   nodes: Node[];
-  setNodes: (nodes: Node[] | ((nodes: Node[]) => Node[])) => void;
   onNodesChange: OnNodesChange;
+  setNodes: (nodes: Node[] | ((nodes: Node[]) => Node[])) => void;
+  onNodeSelect: (node: Node | null) => void;
 }
 
-const DaoCanvasComponent = ({ onNodeSelect, nodes, setNodes, onNodesChange }: DaoCanvasProps) => {
+export const DaoCanvas = ({ nodes, onNodesChange, setNodes, onNodeSelect }: DaoCanvasProps) => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
@@ -70,7 +61,7 @@ const DaoCanvasComponent = ({ onNodeSelect, nodes, setNodes, onNodesChange }: Da
       
       const label = `${type.charAt(0).toUpperCase() + type.slice(1)} Node`;
       const newNode: Node = {
-        id: getId(),
+        id: `${Date.now()}`,
         type,
         position,
         data: { label },
@@ -109,37 +100,5 @@ const DaoCanvasComponent = ({ onNodeSelect, nodes, setNodes, onNodesChange }: Da
         <Background gap={12} size={1} />
       </ReactFlow>
     </div>
-  );
-};
-
-export const DaoCanvasProvider = () => {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
-
-  const handleNodeDataChange = (nodeId: string, data: any) => {
-    setNodes((nds) =>
-      nds.map((node) =>
-        node.id === nodeId ? { ...node, data: { ...node.data, ...data } } : node
-      )
-    );
-    // Also update the selected node state if it's the one being changed
-    if (selectedNode && selectedNode.id === nodeId) {
-      setSelectedNode(prev => prev ? { ...prev, data: { ...prev.data, ...data } } : null);
-    }
-  };
-
-  return (
-    <ReactFlowProvider>
-      <Layout
-        configPanel={<ConfigurationPanel selectedNode={selectedNode} onNodeDataChange={handleNodeDataChange} />}
-      >
-        <DaoCanvasComponent
-          onNodeSelect={setSelectedNode}
-          nodes={nodes}
-          setNodes={setNodes}
-          onNodesChange={onNodesChange}
-        />
-      </Layout>
-    </ReactFlowProvider>
   );
 };
