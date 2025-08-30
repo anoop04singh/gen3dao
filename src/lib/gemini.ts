@@ -3,7 +3,7 @@ import {
   GenerateContentResult,
   Tool,
 } from "@google/generative-ai";
-import { Node } from "reactflow";
+import { Node, Edge } from "reactflow";
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 if (!API_KEY) {
@@ -12,7 +12,8 @@ if (!API_KEY) {
 
 const genAI = new GoogleGenerativeAI(API_KEY);
 
-const tools: Tool[] = [
+// --- AI Model for Chat Assistant ---
+const chatTools: Tool[] = [
   {
     functionDeclarations: [
       {
@@ -52,7 +53,7 @@ const tools: Tool[] = [
   },
 ];
 
-const model = genAI.getGenerativeModel({
+const chatModel = genAI.getGenerativeModel({
   model: "gemini-1.5-flash",
   systemInstruction: `You are a helpful and neutral expert in DAO governance. Your role is to assist users in building a DAO by adding components to a visual canvas.
 - Use the 'addNode' function for standard components: 'token', 'voting', 'treasury', 'quorum', or 'timelock'.
@@ -62,10 +63,10 @@ const model = genAI.getGenerativeModel({
 - After adding any node, confirm the action and ask the user if they want to configure it or keep the defaults.
 - If the user asks for an explanation of a configuration parameter, provide a simple, clear definition.
 - Do not give financial or investment advice.`,
-  tools,
+  tools: chatTools,
 });
 
-export const chatSession = model.startChat({
+export const chatSession = chatModel.startChat({
   history: [],
 });
 
@@ -84,4 +85,50 @@ export const sendMessageToAI = async (
   `;
   const result = await chatSession.sendMessage(contextMessage);
   return result;
+};
+
+
+// --- AI Model for Smart Contract Generation ---
+const contractGenerationModel = genAI.getGenerativeModel({
+  model: "gemini-1.5-flash",
+  systemInstruction: `You are an expert Solidity smart contract developer specializing in DAO architecture. Your task is to take a high-level description of a DAO's structure (as a JSON graph of nodes and edges) and a set of placeholder Solidity contracts, and then write the final, complete, and deployable smart contracts.
+
+**Instructions:**
+1.  **Analyze the Graph:** Examine the \`nodes\` and \`edges\` to understand the DAO's architecture and how components are connected.
+2.  **Complete the Code:** Fill in all \`// TODO\` sections and complete any placeholder logic.
+3.  **Implement Custom Logic:** For any 'ai' type nodes, you MUST implement the functionality described in the \`description\` field within the corresponding placeholder contract.
+4.  **Interconnect Contracts:** Ensure contracts are linked correctly by passing addresses in constructors based on the \`edges\` data. For example, the \`Governor\` needs the \`Token\` address, and the \`Treasury\` needs the owner address (either \`Timelock\` or \`Governor\`).
+5.  **Output Format:** Your response MUST be a single, raw JSON string. The JSON object should have filenames as keys (e.g., "Governor.sol") and the complete Solidity code as string values. Do not include any other text, explanations, or markdown formatting.
+`,
+});
+
+export const generateFinalContractsFromAI = async (
+  nodes: Node[],
+  edges: Edge[],
+  placeholders: { filename: string; code: string }[]
+): Promise<{ filename: string; code: string }[]> => {
+  const prompt = `
+    Here is the DAO structure:
+    Nodes: ${JSON.stringify(nodes)}
+    Edges: ${JSON.stringify(edges)}
+
+    Here are the placeholder contracts:
+    ${JSON.stringify(placeholders)}
+
+    Please generate the final, complete code based on the structure and placeholders, following all instructions.
+  `;
+
+  const result = await contractGenerationModel.generateContent(prompt);
+  const jsonString = result.response.text();
+  
+  try {
+    const parsedResult = JSON.parse(jsonString);
+    return Object.entries(parsedResult).map(([filename, code]) => ({
+      filename,
+      code: code as string,
+    }));
+  } catch (error) {
+    console.error("Failed to parse AI response as JSON:", jsonString);
+    throw new Error("The AI returned an invalid response. Please try again.");
+  }
 };
