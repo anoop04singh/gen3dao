@@ -27,14 +27,42 @@ contract ${name.replace(/\s+/g, '')} {
 `;
 };
 
-const generateVotingContract = (node: Node, tokenContractName: string): string => {
-  const quorum = node.data.quorum || 51;
+const generateTimelockContract = (node: Node): string => {
+  const delay = node.data.delay || 2;
+  return `// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+/**
+ * @title Timelock
+ * @dev Delays execution of transactions. The Governor is the only one who can propose transactions.
+ * This is a simplified version for demonstration. A production version would use OpenZeppelin's TimelockController.
+ */
+contract Timelock {
+    uint public delay = ${delay} days;
+    address public governor;
+
+    constructor(address _governor) {
+        governor = _governor;
+    }
+
+    // Note: This is a simplified placeholder for demonstration.
+    // A full implementation would include proposal queueing, execution, and cancellation logic.
+}
+`;
+};
+
+const generateVotingContract = (node: Node, tokenContractName: string, quorum: number, useTimelock: boolean): string => {
   const votingPeriod = node.data.period || 7;
+  const timelockImport = useTimelock ? 'import "./Timelock.sol";' : '';
+  const timelockVariable = useTimelock ? 'Timelock public timelock;' : '';
+  const timelockParam = useTimelock ? ', address _timelockAddress' : '';
+  const timelockAssignment = useTimelock ? '        timelock = Timelock(_timelockAddress);' : '';
 
   return `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
 import "./${tokenContractName}.sol";
+${timelockImport}
 
 /**
  * @title Governor
@@ -42,11 +70,13 @@ import "./${tokenContractName}.sol";
  */
 contract Governor {
     ${tokenContractName} public token;
+    ${timelockVariable}
     uint256 public quorumPercentage = ${quorum};
     uint256 public votingPeriodDays = ${votingPeriod};
 
-    constructor(address _tokenAddress) {
+    constructor(address _tokenAddress${timelockParam}) {
         token = ${tokenContractName}(_tokenAddress);
+${timelockAssignment}
     }
 
     // Note: This is a simplified placeholder for demonstration.
@@ -55,13 +85,13 @@ contract Governor {
 `;
 };
 
-const generateTreasuryContract = (): string => {
+const generateTreasuryContract = (owner: string): string => {
   return `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
 /**
  * @title Treasury
- * @dev Manages the DAO's funds. Can only be controlled by its owner (the Governor contract).
+ * @dev Manages the DAO's funds. Can only be controlled by its owner (the ${owner} contract).
  */
 contract Treasury {
     address public owner;
@@ -82,12 +112,14 @@ contract Treasury {
 
 export const generateDaoContracts = (nodes: Node[], edges: Edge[]): { filename: string, code: string }[] => {
   const contracts: { filename: string, code: string }[] = [];
+  
   const tokenNode = nodes.find(n => n.type === 'token');
   const votingNode = nodes.find(n => n.type === 'voting');
   const treasuryNode = nodes.find(n => n.type === 'treasury');
+  const quorumNode = nodes.find(n => n.type === 'quorum');
+  const timelockNode = nodes.find(n => n.type === 'timelock');
 
   let tokenContractName = '';
-
   if (tokenNode) {
     tokenContractName = (tokenNode.data.name || 'MyToken').replace(/\s+/g, '');
     contracts.push({
@@ -96,16 +128,34 @@ export const generateDaoContracts = (nodes: Node[], edges: Edge[]): { filename: 
     });
   }
 
+  const isTimelockConnectedToVoting = edges.some(e => 
+    (e.source === votingNode?.id && e.target === timelockNode?.id) ||
+    (e.target === votingNode?.id && e.source === timelockNode?.id)
+  );
+
+  if (timelockNode && isTimelockConnectedToVoting) {
+    contracts.push({
+      filename: 'Timelock.sol',
+      code: generateTimelockContract(timelockNode),
+    });
+  }
+
   if (votingNode) {
-    const isConnectedToToken = edges.some(edge => 
-      (edge.source === tokenNode?.id && edge.target === votingNode.id) ||
-      (edge.target === tokenNode?.id && edge.source === votingNode.id)
+    const isVotingConnectedToToken = edges.some(e => 
+      (e.source === tokenNode?.id && e.target === votingNode.id) ||
+      (e.target === tokenNode?.id && e.source === votingNode.id)
     );
 
-    if (isConnectedToToken && tokenContractName) {
+    if (isVotingConnectedToToken && tokenContractName) {
+      const isQuorumConnected = edges.some(e => 
+        (e.source === tokenNode?.id && e.target === quorumNode?.id) ||
+        (e.target === tokenNode?.id && e.source === quorumNode?.id)
+      );
+      const quorumValue = isQuorumConnected ? quorumNode?.data.percentage : 4;
+
       contracts.push({
         filename: 'Governor.sol',
-        code: generateVotingContract(votingNode, tokenContractName),
+        code: generateVotingContract(votingNode, tokenContractName, quorumValue, isTimelockConnectedToVoting),
       });
     } else {
        contracts.push({
@@ -116,9 +166,14 @@ export const generateDaoContracts = (nodes: Node[], edges: Edge[]): { filename: 
   }
 
   if (treasuryNode) {
+    const isTreasuryConnectedToTimelock = edges.some(e => 
+      (e.source === timelockNode?.id && e.target === treasuryNode.id) ||
+      (e.target === timelockNode?.id && e.source === treasuryNode.id)
+    );
+    const treasuryOwner = isTreasuryConnectedToTimelock ? 'Timelock' : 'Governor';
     contracts.push({
       filename: 'Treasury.sol',
-      code: generateTreasuryContract(),
+      code: generateTreasuryContract(treasuryOwner),
     });
   }
 
