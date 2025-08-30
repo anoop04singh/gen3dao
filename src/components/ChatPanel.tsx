@@ -55,7 +55,7 @@ export const ChatPanel = ({ messages, isLoading, onSendMessage }: ChatPanelProps
                 className={`rounded-lg px-3 py-2 max-w-xs ${
                   msg.sender === "user"
                     ? "bg-primary text-primary-foreground"
-                    : "bg-muted"
+                    : "bg-gradient-to-r from-purple-500 to-pink-500 text-primary-foreground"
                 }`}
               >
                 <p className="text-sm">{msg.text}</p>

@@ -15,9 +15,10 @@ import { generateDaoContracts as generatePlaceholderContracts } from "@/lib/cont
 import { generateFinalContractsFromAI } from "@/lib/gemini";
 import { uploadJsonToIpfs } from "@/lib/ipfs";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
-import { Bot, FileCode, Loader, AlertTriangle, PenSquare, CheckCircle } from "lucide-react";
+import { Bot, Loader, AlertTriangle, PenSquare, CheckCircle, Expand } from "lucide-react";
 import { useAccount, useWriteContract } from "wagmi";
 import { daoRegistryAddress, daoRegistryAbi } from "@/lib/contracts";
+import { ContractPreviewDialog } from "./ContractPreviewDialog";
 
 interface DeploymentPanelProps {
   nodes: Node[];
@@ -31,6 +32,7 @@ export const DeploymentPanel = ({ nodes, edges }: DeploymentPanelProps) => {
   const [error, setError] = useState<string | null>(null);
   const [daoAddress, setDaoAddress] = useState('');
   const [step, setStep] = useState<Step>('idle');
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const { isConnected } = useAccount();
   const { writeContract, isPending: isRegistering, data: hash } = useWriteContract();
@@ -128,7 +130,10 @@ export const DeploymentPanel = ({ nodes, edges }: DeploymentPanelProps) => {
     }
 
     return (
-      <div className="flex-1 flex flex-col overflow-hidden border rounded-lg">
+      <div className="flex-1 flex flex-col overflow-hidden border rounded-lg relative">
+        <Button variant="outline" size="sm" className="absolute top-2 right-2 z-10 h-8" onClick={() => setIsPreviewOpen(true)}>
+          <Expand className="mr-2 h-4 w-4" /> Preview
+        </Button>
         <Tabs defaultValue={contracts[0].filename} className="h-full flex flex-col">
           <TabsList className="m-2">
             {contracts.map(contract => (
@@ -148,73 +153,80 @@ export const DeploymentPanel = ({ nodes, edges }: DeploymentPanelProps) => {
   };
 
   return (
-    <SheetContent className="w-[600px] sm:w-[740px] flex flex-col">
-      <SheetHeader>
-        <SheetTitle>Deploy Your DAO</SheetTitle>
-        <SheetDescription>
-          Generate your contracts, deploy them manually, then register the main contract address here.
-        </SheetDescription>
-      </SheetHeader>
-      
-      <div className="flex-1 flex flex-col py-4 space-y-4 overflow-hidden">
-        {/* Step 1: Generation */}
-        <Button onClick={handleGenerateContracts} disabled={step === 'generating'}>
-          {step === 'generating' ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <FileCode className="mr-2 h-4 w-4" />}
-          Step 1: Generate Contracts
-        </Button>
+    <>
+      <ContractPreviewDialog isOpen={isPreviewOpen} onOpenChange={setIsPreviewOpen} contracts={contracts} />
+      <SheetContent className="w-[600px] sm:w-[740px] flex flex-col">
+        <SheetHeader>
+          <SheetTitle>Deploy Your DAO</SheetTitle>
+          <SheetDescription>
+            Generate your contracts, deploy them manually, then register the main contract address here.
+          </SheetDescription>
+        </SheetHeader>
+        
+        <div className="flex-1 flex flex-col py-4 space-y-4 overflow-hidden">
+          {/* Step 1: Generation */}
+          <Button 
+            onClick={handleGenerateContracts} 
+            disabled={step === 'generating'}
+            className="text-primary-foreground bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90"
+          >
+            {step === 'generating' ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <Bot className="mr-2 h-4 w-4" />}
+            Step 1: Generate Contracts
+          </Button>
 
-        {renderContractPreview()}
+          {renderContractPreview()}
 
-        {error && (
-          <div className="text-center p-4 rounded-lg bg-destructive/10 border border-destructive/50">
-            <p className="text-sm font-semibold text-destructive">An Error Occurred</p>
-            <p className="text-xs text-destructive/80 mt-1">{error}</p>
-          </div>
-        )}
-
-        {/* Step 2: Manual Deployment & Registration */}
-        {step === 'generated' && (
-          <div className="p-4 border rounded-lg bg-muted/40 space-y-4">
-            <div>
-              <h3 className="font-semibold mb-2">Step 2: Deploy Manually</h3>
-              <p className="text-xs text-muted-foreground">
-                Use a tool like Remix, Hardhat, or Foundry to deploy the generated contracts. Start with the Token, then the Governor, and so on.
-              </p>
+          {error && (
+            <div className="text-center p-4 rounded-lg bg-destructive/10 border border-destructive/50">
+              <p className="text-sm font-semibold text-destructive">An Error Occurred</p>
+              <p className="text-xs text-destructive/80 mt-1">{error}</p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="dao-address">Step 3: Enter Governor Contract Address</Label>
-              <Input 
-                id="dao-address"
-                placeholder="0x..."
-                value={daoAddress}
-                onChange={(e) => setDaoAddress(e.target.value)}
-              />
-            </div>
-            <Button onClick={handleUploadAndRegister} disabled={!daoAddress.trim() || !isConnected}>
-              <PenSquare className="mr-2 h-4 w-4" />
-              Upload & Register On-Chain
-            </Button>
-          </div>
-        )}
+          )}
 
-        {(step === 'uploading' || step === 'registering' || step === 'registered') && (
-          <div className="p-4 border rounded-lg bg-green-500/10 text-green-700 flex flex-col gap-3">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="h-5 w-5" />
+          {/* Step 2: Manual Deployment & Registration */}
+          {step === 'generated' && (
+            <div className="p-4 border rounded-lg bg-muted/40 space-y-4">
               <div>
-                <h3 className="font-semibold">Registration in Progress!</h3>
-                <p className="text-xs break-all">DAO Address: {daoAddress}</p>
+                <h3 className="font-semibold mb-2">Step 2: Deploy Manually</h3>
+                <p className="text-xs text-muted-foreground">
+                  Use a tool like Remix, Hardhat, or Foundry to deploy the generated contracts. Start with the Token, then the Governor, and so on.
+                </p>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="dao-address">Step 3: Enter Governor Contract Address</Label>
+                <Input 
+                  id="dao-address"
+                  placeholder="0x..."
+                  value={daoAddress}
+                  onChange={(e) => setDaoAddress(e.target.value)}
+                />
+              </div>
+              <Button onClick={handleUploadAndRegister} disabled={!daoAddress.trim() || !isConnected}>
+                <PenSquare className="mr-2 h-4 w-4" />
+                Upload & Register On-Chain
+              </Button>
             </div>
-            {isRegistering && <p className="text-xs flex items-center"><Loader className="mr-2 h-4 w-4 animate-spin" />Waiting for wallet confirmation...</p>}
-            {hash && (
-              <p className="text-xs text-muted-foreground">
-                Transaction sent! <a href={`https://sepolia.etherscan.io/tx/${hash}`} target="_blank" rel="noopener noreferrer" className="underline">View on Etherscan</a>
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-    </SheetContent>
+          )}
+
+          {(step === 'uploading' || step === 'registering' || step === 'registered') && (
+            <div className="p-4 border rounded-lg bg-green-500/10 text-green-700 flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-5 w-5" />
+                <div>
+                  <h3 className="font-semibold">Registration in Progress!</h3>
+                  <p className="text-xs break-all">DAO Address: {daoAddress}</p>
+                </div>
+              </div>
+              {isRegistering && <p className="text-xs flex items-center"><Loader className="mr-2 h-4 w-4 animate-spin" />Waiting for wallet confirmation...</p>}
+              {hash && (
+                <p className="text-xs text-muted-foreground">
+                  Transaction sent! <a href={`https://sepolia.etherscan.io/tx/${hash}`} target="_blank" rel="noopener noreferrer" className="underline">View on Etherscan</a>
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </SheetContent>
+    </>
   );
 };

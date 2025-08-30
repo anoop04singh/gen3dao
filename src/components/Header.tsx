@@ -37,7 +37,7 @@ export const Header = ({ onDeployClick }: HeaderProps) => {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <Bot className="h-6 w-6" />
-          <h1 className="text-xl font-bold">AI DAO Creator</h1>
+          <h1 className="text-xl font-bold">Gen3Dao</h1>
         </div>
         <Button variant="ghost" asChild>
           <Link to="/dashboard">

@@ -5,6 +5,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import { Footer } from "./Footer";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -30,6 +31,7 @@ export const Layout = ({ children, configPanel, sidebar, onDeployClick }: Layout
           {configPanel}
         </ResizablePanel>
       </ResizablePanelGroup>
+      <Footer />
     </div>
   );
 };
