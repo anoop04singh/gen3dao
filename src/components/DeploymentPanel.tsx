@@ -16,10 +16,7 @@ import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast
 import { Bot, FileCode, Loader, AlertTriangle, UploadCloud, PenSquare, Rocket, CheckCircle } from "lucide-react";
 import { useAccount, useWriteContract, useWalletClient, usePublicClient } from "wagmi";
 import { daoRegistryAddress, daoRegistryAbi } from "@/lib/contracts";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { Separator } from "./ui/separator";
-import { deployToken, deployGovernor } from "@/lib/deployment";
+import { deployDAO } from "@/lib/deployment-manager";
 
 interface DeploymentPanelProps {
   nodes: Node[];
@@ -70,23 +67,25 @@ export const DeploymentPanel = ({ nodes, edges }: DeploymentPanelProps) => {
 
     setStep('deploying');
     setDeploymentStatus([]);
+    setError(null);
     const toastId = showLoading("Starting DAO deployment...");
 
+    const updateStatus = (message: string) => {
+      setDeploymentStatus(prev => [...prev, message]);
+    };
+
     try {
-      const tokenNode = nodes.find(n => n.type === 'token');
-      if (!tokenNode) throw new Error("A 'Token' node is required for deployment.");
+      const { daoAddress: deployedDaoAddress } = await deployDAO(
+        nodes,
+        edges,
+        walletClient,
+        publicClient,
+        updateStatus
+      );
       
-      setDeploymentStatus(prev => [...prev, "Deploying Governance Token..."]);
-      const tokenAddress = await deployToken(walletClient, publicClient, tokenNode);
-      setDeploymentStatus(prev => [...prev, `✅ Token deployed at: ${tokenAddress}`]);
-      
-      setDeploymentStatus(prev => [...prev, "Deploying Governor..."]);
-      const governorAddress = await deployGovernor(tokenAddress);
-      setDeploymentStatus(prev => [...prev, `✅ Governor deployed at: ${governorAddress}`]);
-      
-      setDaoAddress(governorAddress);
+      setDaoAddress(deployedDaoAddress);
       dismissToast(toastId);
-      showSuccess("Core contracts deployed successfully!");
+      showSuccess("DAO deployed successfully!");
       setStep('deployed');
 
     } catch (e) {
