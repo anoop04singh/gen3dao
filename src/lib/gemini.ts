@@ -99,6 +99,7 @@ const contractGenerationModel = genAI.getGenerativeModel({
 3.  **Implement Custom Logic:** For any 'ai' type nodes, you MUST implement the functionality described in the \`description\` field within the corresponding placeholder contract.
 4.  **Interconnect Contracts:** Ensure contracts are linked correctly by passing addresses in constructors based on the \`edges\` data. For example, the \`Governor\` needs the \`Token\` address, and the \`Treasury\` needs the owner address (either \`Timelock\` or \`Governor\`).
 5.  **Output Format:** Your response MUST be a single, raw JSON string. The JSON object should have filenames as keys (e.g., "Governor.sol") and the complete Solidity code as string values. Do not include any other text, explanations, or markdown formatting.
+**Crucially, ensure that all double quotes within the Solidity code strings are properly escaped with a backslash (e.g., "string" becomes \\"string\\"). This is vital for the JSON to be valid.**
 `,
 });
 
