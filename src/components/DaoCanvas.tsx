@@ -18,6 +18,8 @@ import 'reactflow/dist/style.css';
 import { TokenNode } from './nodes/TokenNode';
 import { VotingNode } from './nodes/VotingNode';
 import { TreasuryNode } from './nodes/TreasuryNode';
+import { Layout } from './Layout';
+import { ConfigurationPanel } from './ConfigurationPanel';
 
 const initialNodes: Node[] = [];
 
