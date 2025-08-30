@@ -35,7 +35,7 @@ const DashboardPage = () => {
       if (!userDaosData) return;
 
       const [daoAddresses, cids] = userDaosData;
-      console.log(`Dashboard: Found ${cids.length} DAOs for user ${address}.`);
+      console.log(`Dashboard: Found ${cids.length} DAOs for user ${address}. CIDs:`, cids);
       if (cids.length === 0) {
         setDaos([]);
         return;
@@ -45,13 +45,23 @@ const DashboardPage = () => {
       
       const metadataPromises = cids.map(async (cid, index) => {
         const daoAddress = daoAddresses[index];
+        const ipfsUrl = `https://ipfs.io/ipfs/${cid}`;
+        console.log(`Dashboard: Attempting to fetch metadata for DAO ${daoAddress} from URL: ${ipfsUrl}`);
+
         try {
-          const response = await fetch(`https://ipfs.io/ipfs/${cid}`);
-          if (!response.ok) throw new Error(`Failed to fetch metadata for CID ${cid}`);
+          const response = await fetch(ipfsUrl);
+          console.log(`Dashboard: Received response for CID ${cid}. Status: ${response.status}`);
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          
           const metadata = await response.json();
+          console.log(`Dashboard: Successfully parsed metadata for CID ${cid}:`, metadata);
+
           return { daoAddress, cid, name: metadata.name, description: metadata.description };
         } catch (e) {
-          console.error(`Dashboard: Failed to fetch or parse metadata for ${cid}`, e);
+          console.error(`Dashboard: Failed to fetch or parse metadata for CID ${cid}. URL: ${ipfsUrl}`, e);
           return { daoAddress, cid, name: "Metadata not found", description: "Could not load details from IPFS." };
         }
       });
