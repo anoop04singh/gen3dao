@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Bot, User, Loader } from "lucide-react";
 import { Avatar, AvatarFallback } from "./ui/avatar";
-import { sendMessageToAI } from "@/lib/gemini";
 
 interface Message {
   sender: "user" | "ai";
@@ -14,70 +13,29 @@ interface Message {
 }
 
 interface ChatPanelProps {
-  addNode: (type: string) => void;
+  messages: Message[];
+  isLoading: boolean;
+  onSendMessage: (message: string) => void;
 }
 
-export const ChatPanel = ({ addNode }: ChatPanelProps) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      sender: "ai",
-      text: "Hello! Describe your DAO, and I'll help you build it. Try 'Create a DAO with a token and voting'.",
-    },
-  ]);
+export const ChatPanel = ({ messages, isLoading, onSendMessage }: ChatPanelProps) => {
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Auto-scroll to the bottom when messages change
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTo({
-        top: scrollAreaRef.current.scrollHeight,
-        behavior: "smooth",
-      });
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
-
-    const userMessage: Message = { sender: "user", text: input };
-    setMessages((prev) => [...prev, userMessage]);
+    onSendMessage(input);
     setInput("");
-    setIsLoading(true);
-
-    try {
-      const result = await sendMessageToAI(input);
-      const { response } = result;
-
-      const functionCalls = response.functionCalls();
-      if (functionCalls && functionCalls.length > 0) {
-        for (const call of functionCalls) {
-          if (call.name === "addNode" && call.args.type) {
-            addNode(call.args.type as string);
-          }
-        }
-      }
-
-      const aiText = response.text();
-      const aiResponse: Message = { sender: "ai", text: aiText };
-      setMessages((prev) => [...prev, aiResponse]);
-    } catch (error) {
-      console.error("Error sending message to AI:", error);
-      const errorMessage: Message = {
-        sender: "ai",
-        text: "Sorry, I encountered an error. Please check your API key and try again.",
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   return (
     <div className="flex flex-col h-full">
-      <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+      <ScrollArea className="flex-1 p-4">
         <div className="space-y-4">
           {messages.map((msg, index) => (
             <div
@@ -123,9 +81,10 @@ export const ChatPanel = ({ addNode }: ChatPanelProps) => {
               </div>
             </div>
           )}
+          <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
-      <form onSubmit={handleSendMessage} className="p-4 border-t bg-card">
+      <form onSubmit={handleFormSubmit} className="p-4 border-t bg-card">
         <div className="relative">
           <Input
             value={input}
@@ -138,7 +97,7 @@ export const ChatPanel = ({ addNode }: ChatPanelProps) => {
             type="submit"
             size="sm"
             className="absolute top-1/2 right-1.5 -translate-y-1/2"
-            disabled={isLoading}
+            disabled={isLoading || !input.trim()}
           >
             Send
           </Button>
