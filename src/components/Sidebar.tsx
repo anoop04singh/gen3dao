@@ -37,7 +37,7 @@ const TemplateSelector = ({ onSelectTemplate }: { onSelectTemplate: (templateKey
 
 export const Sidebar = ({ messages, isLoading, onSendMessage, onSelectTemplate }: SidebarProps) => {
   return (
-    <aside className="w-1/4 min-w-[300px] max-w-[400px] bg-card border-r flex flex-col">
+    <aside className="w-1/4 min-w-[300px] max-w-[400px] bg-card border-r flex flex-col h-full">
       <Tabs defaultValue="chat" className="flex flex-col h-full">
         <TabsList className="grid w-full grid-cols-3 m-2">
           <TabsTrigger value="chat">AI Assistant</TabsTrigger>
