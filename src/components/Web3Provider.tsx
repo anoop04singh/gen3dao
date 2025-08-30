@@ -1,5 +1,5 @@
 import { WagmiProvider, createConfig, http } from 'wagmi'
-import { mainnet, sepolia, polygon } from 'wagmi/chains'
+import { mainnet, sepolia, polygon, arbitrumSepolia, baseSepolia, optimismSepolia } from 'wagmi/chains'
 import { injected } from 'wagmi/connectors'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
@@ -9,7 +9,7 @@ if (!alchemyApiKey) {
 }
 
 const config = createConfig({
-  chains: [mainnet, sepolia, polygon],
+  chains: [mainnet, sepolia, polygon, arbitrumSepolia, baseSepolia, optimismSepolia],
   connectors: [
     injected(),
   ],
@@ -17,6 +17,9 @@ const config = createConfig({
     [mainnet.id]: http(alchemyApiKey ? `https://eth-mainnet.g.alchemy.com/v2/${alchemyApiKey}` : undefined),
     [sepolia.id]: http(alchemyApiKey ? `https://eth-sepolia.g.alchemy.com/v2/${alchemyApiKey}` : undefined),
     [polygon.id]: http(alchemyApiKey ? `https://polygon-mainnet.g.alchemy.com/v2/${alchemyApiKey}` : undefined),
+    [arbitrumSepolia.id]: http(alchemyApiKey ? `https://arb-sepolia.g.alchemy.com/v2/${alchemyApiKey}` : undefined),
+    [baseSepolia.id]: http(alchemyApiKey ? `https://base-sepolia.g.alchemy.com/v2/${alchemyApiKey}` : undefined),
+    [optimismSepolia.id]: http(alchemyApiKey ? `https://opt-sepolia.g.alchemy.com/v2/${alchemyApiKey}` : undefined),
   },
 })
 
