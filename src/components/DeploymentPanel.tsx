@@ -220,7 +220,7 @@ export const DeploymentPanel = ({ nodes, edges }: DeploymentPanelProps) => {
               {isRegistering && <p className="text-xs flex items-center"><Loader className="mr-2 h-4 w-4 animate-spin" />Waiting for wallet confirmation...</p>}
               {hash && (
                 <p className="text-xs text-muted-foreground">
-                  Transaction sent! <a href={`https://sepolia.etherscan.io/tx/${hash}`} target="_blank" rel="noopener noreferrer" className="underline">View on Etherscan</a>
+                  Transaction sent! <a href={`https://evm-testnet.flowscan.io/tx/${hash}`} target="_blank" rel="noopener noreferrer" className="underline">View on Etherscan</a>
                 </p>
               )}
             </div>
