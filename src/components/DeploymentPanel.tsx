@@ -7,42 +7,39 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 import { ScrollArea } from "./ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generateDaoContracts as generatePlaceholderContracts } from "@/lib/contract-generator";
 import { generateFinalContractsFromAI } from "@/lib/gemini";
 import { uploadJsonToIpfs } from "@/lib/ipfs";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
-import { Bot, FileCode, Loader, AlertTriangle, UploadCloud, PenSquare, Rocket, CheckCircle } from "lucide-react";
-import { useAccount, useWriteContract, useWalletClient, usePublicClient } from "wagmi";
+import { Bot, FileCode, Loader, AlertTriangle, PenSquare, CheckCircle } from "lucide-react";
+import { useAccount, useWriteContract } from "wagmi";
 import { daoRegistryAddress, daoRegistryAbi } from "@/lib/contracts";
-import { deployDAO } from "@/lib/deployment-manager";
 
 interface DeploymentPanelProps {
   nodes: Node[];
   edges: Edge[];
 }
 
-type DeploymentStep = 'idle' | 'generating' | 'generated' | 'deploying' | 'deployed' | 'uploading' | 'uploaded' | 'registering' | 'registered';
+type Step = 'idle' | 'generating' | 'generated' | 'uploading' | 'registering' | 'registered';
 
 export const DeploymentPanel = ({ nodes, edges }: DeploymentPanelProps) => {
   const [contracts, setContracts] = useState<{ filename: string, code: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [ipfsCid, setIpfsCid] = useState<string | null>(null);
   const [daoAddress, setDaoAddress] = useState('');
-  const [deploymentStatus, setDeploymentStatus] = useState<string[]>([]);
-  const [step, setStep] = useState<DeploymentStep>('idle');
+  const [step, setStep] = useState<Step>('idle');
 
   const { isConnected } = useAccount();
-  const { data: walletClient } = useWalletClient();
-  const publicClient = usePublicClient();
   const { writeContract, isPending: isRegistering, data: hash } = useWriteContract();
 
   const handleGenerateContracts = async () => {
     setStep('generating');
     setError(null);
     setContracts([]);
-    setIpfsCid(null);
+    setDaoAddress('');
 
     try {
       const placeholders = generatePlaceholderContracts(nodes, edges);
@@ -59,52 +56,9 @@ export const DeploymentPanel = ({ nodes, edges }: DeploymentPanelProps) => {
     }
   };
 
-  const handleDeploy = async () => {
-    if (!walletClient || !publicClient) {
-      showError("Wallet not connected or configured properly.");
-      return;
-    }
-    if (contracts.length === 0) {
-      showError("Please generate contracts before deploying.");
-      return;
-    }
-
-    setStep('deploying');
-    setDeploymentStatus([]);
-    setError(null);
-    const toastId = showLoading("Starting DAO deployment...");
-
-    const updateStatus = (message: string) => {
-      setDeploymentStatus(prev => [...prev, message]);
-    };
-
-    try {
-      const { daoAddress: deployedDaoAddress } = await deployDAO(
-        nodes,
-        edges,
-        contracts,
-        walletClient,
-        publicClient,
-        updateStatus
-      );
-      
-      setDaoAddress(deployedDaoAddress);
-      dismissToast(toastId);
-      showSuccess("DAO deployed successfully!");
-      setStep('deployed');
-
-    } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : "An unknown error occurred during deployment.";
-      dismissToast(toastId);
-      showError(errorMessage);
-      setError(errorMessage);
-      setStep('generated'); // Revert to previous step on failure
-    }
-  };
-
   const handleUploadAndRegister = async () => {
     if (!daoAddress.startsWith('0x') || daoAddress.length !== 42) {
-      showError("A valid deployed DAO address is required.");
+      showError("Please enter a valid deployed DAO address.");
       return;
     }
     if (!isConnected) {
@@ -112,7 +66,6 @@ export const DeploymentPanel = ({ nodes, edges }: DeploymentPanelProps) => {
       return;
     }
 
-    // Upload to IPFS
     setStep('uploading');
     const uploadToastId = showLoading("Uploading DAO info to IPFS...");
     let cid;
@@ -126,19 +79,16 @@ export const DeploymentPanel = ({ nodes, edges }: DeploymentPanelProps) => {
         contracts,
       };
       cid = await uploadJsonToIpfs(metadata);
-      setIpfsCid(cid);
       dismissToast(uploadToastId);
       showSuccess("DAO info uploaded to IPFS!");
-      setStep('uploaded');
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : "IPFS upload failed.";
       dismissToast(uploadToastId);
       showError(errorMessage);
-      setStep('deployed'); // Revert
+      setStep('generated'); // Revert
       return;
     }
 
-    // Register on-chain
     setStep('registering');
     writeContract({
       address: daoRegistryAddress,
@@ -153,7 +103,7 @@ export const DeploymentPanel = ({ nodes, edges }: DeploymentPanelProps) => {
       },
       onError: (error) => {
         showError(error.shortMessage || "Registration failed.");
-        setStep('uploaded'); // Revert
+        setStep('generated'); // Revert
       }
     });
   };
@@ -202,15 +152,15 @@ export const DeploymentPanel = ({ nodes, edges }: DeploymentPanelProps) => {
       <SheetHeader>
         <SheetTitle>Deploy Your DAO</SheetTitle>
         <SheetDescription>
-          A step-by-step guide to generating, deploying, and registering your DAO on-chain.
+          Generate your contracts, deploy them manually, then register the main contract address here.
         </SheetDescription>
       </SheetHeader>
       
       <div className="flex-1 flex flex-col py-4 space-y-4 overflow-hidden">
         {/* Step 1: Generation */}
-        <Button onClick={handleGenerateContracts} disabled={step !== 'idle' && step !== 'generated'}>
+        <Button onClick={handleGenerateContracts} disabled={step === 'generating'}>
           {step === 'generating' ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <FileCode className="mr-2 h-4 w-4" />}
-          Step 1: Generate & Preview Contracts
+          Step 1: Generate Contracts
         </Button>
 
         {renderContractPreview()}
@@ -222,46 +172,47 @@ export const DeploymentPanel = ({ nodes, edges }: DeploymentPanelProps) => {
           </div>
         )}
 
-        {/* Step 2: Deployment */}
+        {/* Step 2: Manual Deployment & Registration */}
         {step === 'generated' && (
-          <Button onClick={handleDeploy} disabled={!isConnected}>
-            <Rocket className="mr-2 h-4 w-4" />
-            Step 2: Deploy Contracts
-          </Button>
-        )}
-
-        {step === 'deploying' && (
-          <div className="p-4 border rounded-lg bg-muted/40 flex-1 overflow-y-auto">
-            <h3 className="font-semibold mb-2 flex items-center"><Loader className="mr-2 h-4 w-4 animate-spin" /> Deployment in Progress...</h3>
-            <ul className="text-xs space-y-1 list-inside">
-              {deploymentStatus.map((status, index) => <li key={index} className="break-all">{status}</li>)}
-            </ul>
+          <div className="p-4 border rounded-lg bg-muted/40 space-y-4">
+            <div>
+              <h3 className="font-semibold mb-2">Step 2: Deploy Manually</h3>
+              <p className="text-xs text-muted-foreground">
+                Use a tool like Remix, Hardhat, or Foundry to deploy the generated contracts. Start with the Token, then the Governor, and so on.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dao-address">Step 3: Enter Governor Contract Address</Label>
+              <Input 
+                id="dao-address"
+                placeholder="0x..."
+                value={daoAddress}
+                onChange={(e) => setDaoAddress(e.target.value)}
+              />
+            </div>
+            <Button onClick={handleUploadAndRegister} disabled={!daoAddress.trim() || !isConnected}>
+              <PenSquare className="mr-2 h-4 w-4" />
+              Upload & Register On-Chain
+            </Button>
           </div>
         )}
 
-        {/* Step 3: Registration */}
-        {(step === 'deployed' || step === 'uploading' || step === 'uploaded' || step === 'registering' || step === 'registered') && (
-          <>
-            <div className="p-4 border rounded-lg bg-green-500/10 text-green-700 flex items-center gap-3">
+        {(step === 'uploading' || step === 'registering' || step === 'registered') && (
+          <div className="p-4 border rounded-lg bg-green-500/10 text-green-700 flex flex-col gap-3">
+            <div className="flex items-center gap-3">
               <CheckCircle className="h-5 w-5" />
               <div>
-                <h3 className="font-semibold">Deployment Successful!</h3>
+                <h3 className="font-semibold">Registration in Progress!</h3>
                 <p className="text-xs break-all">DAO Address: {daoAddress}</p>
               </div>
             </div>
-            <Button onClick={handleUploadAndRegister} disabled={step === 'uploading' || step === 'registering' || step === 'registered'}>
-              {(step === 'uploading' || step === 'registering') && <Loader className="mr-2 h-4 w-4 animate-spin" />}
-              {step === 'registered' ? <CheckCircle className="mr-2 h-4 w-4" /> : <PenSquare className="mr-2 h-4 w-4" />}
-              Step 3: Upload & Register On-Chain
-            </Button>
+            {isRegistering && <p className="text-xs flex items-center"><Loader className="mr-2 h-4 w-4 animate-spin" />Waiting for wallet confirmation...</p>}
             {hash && (
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground">
-                  Registration transaction sent! <a href={`https://sepolia.etherscan.io/tx/${hash}`} target="_blank" rel="noopener noreferrer" className="underline">View on Etherscan</a>
-                </p>
-              </div>
+              <p className="text-xs text-muted-foreground">
+                Transaction sent! <a href={`https://sepolia.etherscan.io/tx/${hash}`} target="_blank" rel="noopener noreferrer" className="underline">View on Etherscan</a>
+              </p>
             )}
-          </>
+          </div>
         )}
       </div>
     </SheetContent>

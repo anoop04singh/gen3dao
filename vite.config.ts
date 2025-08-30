@@ -14,8 +14,4 @@ export default defineConfig(() => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // Add this define block to polyfill the 'process' global for the browser environment
-  define: {
-    'process': '({ env: {} })'
-  }
 }));
