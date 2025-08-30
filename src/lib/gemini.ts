@@ -3,7 +3,7 @@ import {
   GenerateContentResult,
   Tool,
 } from "@google/generative-ai";
-import { Node, Edge } from "reactflow";
+import { Node } from "reactflow";
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 if (!API_KEY) {
@@ -25,8 +25,12 @@ const chatTools: Tool[] = [
             type: {
               type: "STRING",
               description:
-                "The type of node to add. Can be 'token', 'voting', 'treasury', 'quorum', or 'timlock'.",
+                "The type of node to add. Can be 'token', 'voting', 'treasury', 'quorum', or 'timelock'.",
             },
+            connectToType: {
+              type: "STRING",
+              description: "Optional. The type of an existing node to connect this new node to. For example, when adding a 'voting' node, you might set this to 'token'."
+            }
           },
           required: ["type"],
         },
@@ -57,6 +61,9 @@ const chatModel = genAI.getGenerativeModel({
   model: "gemini-1.5-flash",
   systemInstruction: `You are a helpful and neutral expert in DAO governance. Your role is to assist users in building a DAO by adding components to a visual canvas.
 - Use the 'addNode' function for standard components: 'token', 'voting', 'treasury', 'quorum', or 'timelock'.
+- When a user asks to add multiple components that should be connected (e.g., 'a token and voting'), you MUST make multiple 'addNode' calls in the correct order.
+- Use the 'connectToType' parameter in the 'addNode' function to create a connection. For example, to connect a new 'voting' node to an existing 'token' node, call 'addNode' with type: 'voting' and connectToType: 'token'.
+- Logical connections are important: a 'voting' node needs a 'token' node, a 'quorum' node also connects to the 'token', a 'timelock' connects from a 'voting' node, and a 'treasury' connects from a 'timelock' or 'voting' node.
 - Before adding a standard node, check if a node of the same type already exists. If it does, inform the user.
 - For user requests that describe custom logic, rules, or functions not covered by the standard nodes, you MUST use the 'addCustomNode' function. For example, if a user asks for 'a way to distribute profits to token holders' or 'a module for milestone-based funding', use 'addCustomNode'.
 - When calling 'addCustomNode', provide a clear 'label' and a detailed 'description' based on the user's request.
@@ -74,14 +81,11 @@ export const sendMessageToAI = async (
   message: string,
   nodes: Node[]
 ): Promise<GenerateContentResult> => {
-  const existingNodeTypes = nodes.map((node) => node.type).filter(Boolean);
   const contextMessage = `
     User message: "${message}"
     ---
-    System context: The following nodes already exist on the canvas: [${existingNodeTypes.join(
-      ", "
-    )}]. 
-    Do not add nodes that are already in this list.
+    System context: The current nodes on the canvas are: ${JSON.stringify(nodes.map(n => ({id: n.id, type: n.type})))}. 
+    Do not add nodes of a type that already exists. When adding new nodes, use the 'connectToType' parameter to connect them logically if appropriate.
   `;
   const result = await chatSession.sendMessage(contextMessage);
   return result;

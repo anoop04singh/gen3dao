@@ -49,26 +49,6 @@ const BuilderPage = () => {
     setSelectedNode(null);
   };
 
-  const addNode = (type: string) => {
-    const newNode: Node = {
-      id: getId(),
-      type,
-      position: { x: Math.random() * 250 + 100, y: Math.random() * 150 + 50 },
-      data: { label: `${type.charAt(0).toUpperCase() + type.slice(1)} Node` },
-    };
-    setNodes((nds) => nds.concat(newNode));
-  };
-
-  const addCustomNode = (label: string, description: string) => {
-    const newNode: Node = {
-      id: getId(),
-      type: 'ai',
-      position: { x: Math.random() * 250 + 100, y: Math.random() * 150 + 50 },
-      data: { label, description },
-    };
-    setNodes((nds) => nds.concat(newNode));
-  };
-
   const handleAiSendMessage = async (input: string) => {
     if (!input.trim() || isAiLoading) return;
 
@@ -82,13 +62,56 @@ const BuilderPage = () => {
 
       const functionCalls = response.functionCalls();
       if (functionCalls && functionCalls.length > 0) {
+        let newNodes: Node[] = [];
+        let newEdges: Edge[] = [];
+        const currentNodes = nodes;
+
         for (const call of functionCalls) {
           if (call.name === "addNode" && call.args.type) {
-            addNode(call.args.type as string);
+            const nodeInfo = {
+              type: call.args.type as string,
+              connectToType: call.args.connectToType as string | undefined
+            };
+            const newNodeId = getId();
+            const newNode: Node = {
+              id: newNodeId,
+              type: nodeInfo.type,
+              position: { x: Math.random() * 250 + 100, y: Math.random() * 150 + 50 },
+              data: { label: `${nodeInfo.type.charAt(0).toUpperCase() + nodeInfo.type.slice(1)} Node` },
+            };
+            newNodes.push(newNode);
+
+            if (nodeInfo.connectToType) {
+              const allAvailableNodes = [...currentNodes, ...newNodes];
+              const sourceNode = [...allAvailableNodes].reverse().find(n => n.type === nodeInfo.connectToType);
+              if (sourceNode) {
+                newEdges.push({
+                  id: `e-${sourceNode.id}-${newNodeId}`,
+                  source: sourceNode.id,
+                  target: newNodeId,
+                });
+              }
+            }
           }
           if (call.name === "addCustomNode" && call.args.label && call.args.description) {
-            addCustomNode(call.args.label as string, call.args.description as string);
+            const customNodeInfo = {
+              label: call.args.label as string,
+              description: call.args.description as string
+            };
+            newNodes.push({
+              id: getId(),
+              type: 'ai',
+              position: { x: Math.random() * 250 + 100, y: Math.random() * 150 + 50 },
+              data: { label: customNodeInfo.label, description: customNodeInfo.description },
+            });
           }
+        }
+        
+        if (newNodes.length > 0) {
+          setNodes(nds => [...nds, ...newNodes]);
+        }
+        if (newEdges.length > 0) {
+          setEdges(eds => newEdges.reduce((acc, edge) => addEdge(edge, acc), eds));
         }
       }
 
