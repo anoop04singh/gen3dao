@@ -1,5 +1,5 @@
 // The address of your newly deployed DAORegistryV2 contract
-export const daoRegistryAddress = '0xf95e4594f90436e26a349b7f5b31f592be790547';
+export const daoRegistryAddress = '0x37D50136Ac1f6010AC6C4B67893434B366AF0aaF';
 
 export const daoRegistryAbi = [
 	{
