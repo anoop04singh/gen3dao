@@ -1,11 +1,10 @@
 import { Layout } from "@/components/Layout";
+import { DaoCanvasProvider } from "@/components/DaoCanvas";
 
 const Index = () => {
   return (
     <Layout>
-      <div className="w-full h-full bg-background rounded-lg border border-dashed flex items-center justify-center">
-        <p className="text-muted-foreground">DAO Canvas Area</p>
-      </div>
+      <DaoCanvasProvider />
     </Layout>
   );
 };
