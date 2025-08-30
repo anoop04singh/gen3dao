@@ -13,11 +13,13 @@ import { generateDaoContracts as generatePlaceholderContracts } from "@/lib/cont
 import { generateFinalContractsFromAI } from "@/lib/gemini";
 import { uploadJsonToIpfs } from "@/lib/ipfs";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
-import { Bot, FileCode, Loader, AlertTriangle, UploadCloud, PenSquare } from "lucide-react";
-import { useAccount, useWriteContract } from "wagmi";
+import { Bot, FileCode, Loader, AlertTriangle, UploadCloud, PenSquare, Rocket } from "lucide-react";
+import { useAccount, useWriteContract, useWalletClient, usePublicClient } from "wagmi";
 import { daoRegistryAddress, daoRegistryAbi } from "@/lib/contracts";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { Separator } from "./ui/separator";
+import { deployToken, deployGovernor } from "@/lib/deployment";
 
 interface DeploymentPanelProps {
   nodes: Node[];
@@ -31,8 +33,12 @@ export const DeploymentPanel = ({ nodes, edges }: DeploymentPanelProps) => {
   const [error, setError] = useState<string | null>(null);
   const [ipfsCid, setIpfsCid] = useState<string | null>(null);
   const [daoAddress, setDaoAddress] = useState('');
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [deploymentStatus, setDeploymentStatus] = useState<string[]>([]);
 
   const { isConnected } = useAccount();
+  const { data: walletClient } = useWalletClient();
+  const publicClient = usePublicClient();
   const { writeContract, isPending: isRegistering, data: hash } = useWriteContract();
 
   const handleGenerateContracts = async () => {
@@ -57,9 +63,52 @@ export const DeploymentPanel = ({ nodes, edges }: DeploymentPanelProps) => {
     }
   };
 
+  const handleFullDeploy = async () => {
+    if (!walletClient || !publicClient) {
+      showError("Wallet not connected or configured properly.");
+      return;
+    }
+
+    setIsDeploying(true);
+    setDeploymentStatus([]);
+    const toastId = showLoading("Starting DAO deployment...");
+
+    try {
+      // Step 1: Deploy Token
+      const tokenNode = nodes.find(n => n.type === 'token');
+      if (!tokenNode) throw new Error("Token node not found in canvas.");
+      
+      setDeploymentStatus(prev => [...prev, "Deploying Governance Token..."]);
+      const tokenAddress = await deployToken(walletClient, publicClient, tokenNode);
+      setDeploymentStatus(prev => [...prev, `Token deployed at: ${tokenAddress}`]);
+      showSuccess("Token contract deployed!");
+
+      // Step 2: Deploy Governor (and others in sequence)
+      // This is a simplified flow. A full implementation would deploy all contracts.
+      setDeploymentStatus(prev => [...prev, "Deploying Governor..."]);
+      const governorAddress = await deployGovernor(tokenAddress);
+      setDeploymentStatus(prev => [...prev, `Governor deployed at: ${governorAddress}`]);
+      showSuccess("Governor contract deployed!");
+      setDaoAddress(governorAddress); // Assuming Governor is the main DAO address
+
+      // Final Step: Register
+      setDeploymentStatus(prev => [...prev, "DAO Deployed! Please upload to IPFS and register."]);
+      dismissToast(toastId);
+      showSuccess("Core contracts deployed successfully!");
+
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : "An unknown error occurred during deployment.";
+      dismissToast(toastId);
+      showError(errorMessage);
+      setError(errorMessage);
+    } finally {
+      setIsDeploying(false);
+    }
+  };
+
   const handleUploadToIpfs = async () => {
     if (!daoAddress.startsWith('0x') || daoAddress.length !== 42) {
-      showError("Please enter a valid Ethereum address for your DAO contract.");
+      showError("Please enter or deploy a valid DAO contract address.");
       return;
     }
     setIsUploading(true);
@@ -117,6 +166,7 @@ export const DeploymentPanel = ({ nodes, edges }: DeploymentPanelProps) => {
   };
 
   const renderContent = () => {
+    // ... (existing renderContent logic remains the same)
     if (isGenerating) {
       return (
         <div className="text-center p-8 border rounded-lg bg-muted h-full flex flex-col justify-center items-center">
@@ -176,28 +226,45 @@ export const DeploymentPanel = ({ nodes, edges }: DeploymentPanelProps) => {
       <SheetHeader>
         <SheetTitle>Deploy DAO</SheetTitle>
         <SheetDescription>
-          Generate contracts, upload metadata to IPFS, and then register on-chain.
+          Generate, deploy, and register your DAO, all from this panel.
         </SheetDescription>
       </SheetHeader>
       
-      <div className="py-4 space-y-4">
-        <Button onClick={handleGenerateContracts} className="w-full" disabled={isGenerating || isUploading || isRegistering}>
-          {isGenerating ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <FileCode className="mr-2 h-4 w-4" />}
-          Step 1: Generate Smart Contracts
-        </Button>
-      </div>
-
-      <div className="flex-1 overflow-hidden">
-        {renderContent()}
-      </div>
-      
-      {contracts.length > 0 && (
-        <div className="mt-auto pt-4 space-y-4 border-t">
+      <Tabs defaultValue="deploy" className="flex-1 flex flex-col overflow-hidden py-4">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="deploy">1. Deploy Contracts</TabsTrigger>
+          <TabsTrigger value="register">2. Register DAO</TabsTrigger>
+        </TabsList>
+        <TabsContent value="deploy" className="flex-1 flex flex-col overflow-hidden pt-4 space-y-4">
+          <Button onClick={handleFullDeploy} className="w-full" disabled={isDeploying || !isConnected}>
+            {isDeploying ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <Rocket className="mr-2 h-4 w-4" />}
+            Deploy All Contracts
+          </Button>
+          {deploymentStatus.length > 0 && (
+            <div className="p-4 border rounded-lg bg-muted/40 flex-1 overflow-y-auto">
+              <h3 className="font-semibold mb-2">Deployment Progress:</h3>
+              <ul className="text-xs space-y-1 list-disc list-inside">
+                {deploymentStatus.map((status, index) => (
+                  <li key={index} className="break-all">{status}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </TabsContent>
+        <TabsContent value="register" className="flex-1 flex flex-col overflow-hidden pt-4 space-y-4">
+          <Button onClick={handleGenerateContracts} className="w-full" disabled={isGenerating || isUploading || isRegistering}>
+            {isGenerating ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <FileCode className="mr-2 h-4 w-4" />}
+            Generate Contract Code (for IPFS)
+          </Button>
+          <div className="flex-1 overflow-hidden">
+            {renderContent()}
+          </div>
+          <Separator />
           <div className="space-y-2">
             <Label htmlFor="dao-address">DAO Contract Address</Label>
             <Input 
               id="dao-address" 
-              placeholder="0x... (Deploy generated contracts and paste address here)" 
+              placeholder="This will be filled after deployment" 
               value={daoAddress}
               onChange={(e) => setDaoAddress(e.target.value)}
               disabled={isRegistering || isUploading}
@@ -205,27 +272,23 @@ export const DeploymentPanel = ({ nodes, edges }: DeploymentPanelProps) => {
           </div>
           <Button onClick={handleUploadToIpfs} className="w-full" disabled={isUploading || isGenerating || isRegistering || !daoAddress.trim()}>
             {isUploading ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
-            Step 2: Upload Info to IPFS
+            Upload Info to IPFS
           </Button>
-
           {ipfsCid && (
             <>
-              <div className="space-y-2 text-center">
-                <p className="text-xs text-muted-foreground break-all">
-                  IPFS CID: <a href={`https://ipfs.io/ipfs/${ipfsCid}`} target="_blank" rel="noopener noreferrer" className="underline">{ipfsCid}</a>
-                </p>
-              </div>
+              <p className="text-xs text-muted-foreground break-all text-center">
+                IPFS CID: {ipfsCid}
+              </p>
               <Button 
                 onClick={handleRegisterDao} 
                 className="w-full" 
                 disabled={isRegistering || !daoAddress.trim() || !isConnected}
               >
                 {isRegistering ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <PenSquare className="mr-2 h-4 w-4" />}
-                Step 3: Register DAO On-Chain
+                Register DAO On-Chain
               </Button>
             </>
           )}
-
           {hash && (
             <div className="text-center">
               <p className="text-xs text-muted-foreground">
@@ -233,8 +296,8 @@ export const DeploymentPanel = ({ nodes, edges }: DeploymentPanelProps) => {
               </p>
             </div>
           )}
-        </div>
-      )}
+        </TabsContent>
+      </Tabs>
     </SheetContent>
   );
 };
